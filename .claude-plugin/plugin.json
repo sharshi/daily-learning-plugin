@@ -1,0 +1,6 @@
+{
+  "name": "chitas",
+  "version": "0.1.0",
+  "description": "Daily learning above the prompt: Chumash aliyah + Rashi, Tehillim, Tanya, Rambam, Hayom Yom, Daf Yomi. /chitas prints the full text.",
+  "author": { "name": "Shersheial" }
+}
