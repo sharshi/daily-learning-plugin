@@ -13,7 +13,7 @@ In a Claude Code session:
 
 Then `/dl` opens the sidebar. Needs Claude Code 2.1.286+ and `python3`.
 
-<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/2ac93e6f-2334-4886-beb0-071f204dd5ad" />
+<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
 
 ## Today
 
@@ -41,8 +41,6 @@ In the sidebar, **📅 Today** is a menu of the day's sections; each opens into 
 - **Mishneh Torah**: 14 sefarim, hilchos perek by perek
 
 Pick a collection, a seder or sefer, a masechta or hilchos, then a perek or daf. **Continue** picks up where you left each one, in any session; **next ›** runs straight on into the next masechta. Texts load from Sefaria only when you open them.
-
-<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
 
 ## Hebrew that reads right
 
