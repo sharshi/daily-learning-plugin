@@ -155,7 +155,7 @@ test("Library labels in Ghostty: the Hebrew in a button is reversed like the tex
   expect(bare((await ui.find({ key: "book-Mishnah-Berakhot" }))?.text ?? "")).toBe("");  // no such button on the perek grid
 });
 
-test("the line above the prompt: today's sections, then 📚 the Library, then where each collection was left", { timeoutMs: 30000 }, async ($, on) => {
+test("the line above the prompt: Today's learning, the Library, and ▶ where each collection was left", { timeoutMs: 30000 }, async ($, on) => {
   const { clock } = host(on);
   const tick = async () => { await clock.advance(1); await settle(); };
   on("command.register", async () => ({ value: undefined }) as never);
@@ -163,9 +163,10 @@ test("the line above the prompt: today's sections, then 📚 the Library, then w
   await settle();
   const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
   await settle();
-  // Nothing read yet: one button that opens the Library.
+  // Nothing read yet: Today's learning and the Library, no continue buttons.
+  expect(await band.find({ key: "band-today" })).toBeDefined();
   expect(await band.find({ key: "band-library" })).toBeDefined();
-  expect(await band.find({ key: "row-Tanya" })).toBeDefined();
+  expect(await band.find({ key: "band-lib-mishnah" })).toBeUndefined();
 
   // Read Berakhot 9 in the Library; the line then offers to continue it.
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
@@ -176,8 +177,8 @@ test("the line above the prompt: today's sections, then 📚 the Library, then w
   await ui.press({ key: "book-Mishnah-Berakhot" } as never);
   await ui.press({ key: "unit-9" } as never);
   await tick();
-  expect((await band.find({ key: "band-lib-mishnah" }))?.text).toBe("📚 Berakhot 9");
-  expect(await band.find({ key: "band-library" })).toBeUndefined();
+  expect((await band.find({ key: "band-lib-mishnah" }))?.text).toBe("▶ Berakhot 9");
+  expect(await band.find({ key: "band-library" })).toBeDefined();
 
   // Elsewhere in the sidebar, the band's button goes straight back to it.
   await ui.press({ key: "today" } as never);

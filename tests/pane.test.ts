@@ -79,14 +79,15 @@ test("pane loads its text by itself when drawn", { timeoutMs: 20000 }, async ($,
   expect(JSON.stringify(await ui.drawn())).toContain("Bereshit");
 });
 
-test("clicking a band row opens the pane on that section", { timeoutMs: 20000 }, async ($, on) => {
+test("the band's 📅 Today's learning opens the day's menu", { timeoutMs: 20000 }, async ($, on) => {
   const { opened } = host(on);
   const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
   await settle();
-  await band.press({ key: "row-Tanya" } as never);
+  await band.press({ key: "band-today" } as never);
   expect(opened).toContain("dl");
   await settle();
   const pane = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  expect(await pane.find({ key: "tab-tanya" })).toBeDefined();
   expect(JSON.stringify(await pane.drawn())).toContain("Tanya · 25 Tishrei");
 });
 
@@ -173,10 +174,6 @@ test("Hayom Yom is left out when its text did not load", { timeoutMs: 20000 }, a
   await openTab(pane, "chumash");
   expect(await pane.find({ key: "tab-hayom" })).toBeUndefined();
   expect(JSON.stringify(await pane.drawn())).not.toContain("hayom yom text");
-  const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
-  await settle();
-  expect(await band.find({ key: "row-Hayom Yom" })).toBeUndefined();
-  expect(await band.find({ key: "row-Tanya" })).toBeDefined();
 });
 
 test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutMs: 20000 }, async ($, on) => {
@@ -331,7 +328,7 @@ test("Desktop: Hebrew wrapped and right-aligned, in reading order inside right-t
   expect(texts.some((t) => bare(t.text) === "\u05DB\u05F4\u05D4 \u05D1\u05EA\u05E9\u05E8\u05D9 \u05EA\u05E9\u05E4\u05F4\u05D6")).toBe(true);
 });
 
-test("band is one line of section buttons, and × hides it for the day", { timeoutMs: 20000 }, async ($, on) => {
+test("band is one line: the date, Today's learning, the Library; × hides it for the day", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
   // What the engine draws when the mod passes the band on: nothing.
   on("ui.render", { component: "AbovePrompt" }, async () => ({ type: "Box", props: {}, children: [] }) as never);
@@ -339,14 +336,16 @@ test("band is one line of section buttons, and × hides it for the day", { timeo
   await settle();
   const drawn = await band.drawn();
   expect((drawn as { props?: { flexDirection?: string } }).props?.flexDirection).toBe("row");
-  expect((await band.find({ key: "row-Tanya" }))?.text).toBe("Tanya");
+  expect((await band.find({ key: "band-today" }))?.text).toBe("📅 Today's learning");
+  expect((await band.find({ key: "band-library" }))?.text).toBe("📚 Library");
+  expect(await band.find({ key: "row-Tanya" })).toBeUndefined(); // no list of the day's sections
   expect(await band.find({ key: "dismiss" })).toBeDefined();
 
   await band.press({ key: "dismiss" } as never);
-  expect(await band.find({ key: "row-Tanya" })).toBeUndefined();
+  expect(await band.find({ key: "band-today" })).toBeUndefined();
 
   await $.command.run({ command: "dl-toggle", args: "" } as never);
-  expect(await band.find({ key: "row-Tanya" })).toBeDefined();
+  expect(await band.find({ key: "band-today" })).toBeDefined();
 });
 
 test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the toggle", { timeoutMs: 20000 }, async ($, on) => {

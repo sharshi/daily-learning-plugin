@@ -18,10 +18,10 @@ Then `/dl` opens the sidebar. Needs Claude Code 2.1.286+ and `python3`.
 ## Today
 
 ```
-✡ 25 Tishrei 5787 · Parashat Bereshit  Chumash  Tehillim  Tanya  Rambam ×3  Rambam ×1  Daf Yomi  ·  📚 Ketubot 5  ×
+✡ 25 Tishrei 5787 · Parashat Bereshit   📅 Today's learning   📚 Library   ▶ Ketubot 5   ×
 ```
 
-One line above the prompt holds the day: click a section, or 📚 where you left the Library, and it opens in the sidebar. **×** hides it until tomorrow.
+One line above the prompt: today's date, **📅 Today's learning**, **📚 Library**, and **▶** where you left each Library collection. Each opens the sidebar there; **×** hides the line until tomorrow.
 
 In the sidebar, **📅 Today** is a menu of the day's sections; each opens into its full text, and **next ›** walks through the day in order:
 

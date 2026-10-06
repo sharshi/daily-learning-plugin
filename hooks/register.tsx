@@ -137,12 +137,6 @@ async function loadDay($: Host, key: string) {
 const hasText = (d: Day, id: TabId) => (d.parts[id] ?? []).some((p) => p.he.length || p.en.length);
 const shownTabs = (d: Day | null) => TABS.filter(([id]) => !d || hasText(d, id));
 
-// Band rows → the sidebar tab that holds their text.
-const BAND_TAB: Record<string, TabId> = {
-  Chumash: "chumash", Tehillim: "tehillim", Tanya: "tanya",
-  "Rambam ×3": "rambam3", "Rambam ×1": "rambam1", "Hayom Yom": "hayom", "Daf Yomi": "daf",
-};
-
 // Open the sidebar on a section of the day, or on the day's menu.
 async function openPane($: Host, t?: TabId) {
   await update($, tab, () => t ?? null);
@@ -346,8 +340,7 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const key = todayKey();
     if (hiddenFor === key) return next(e);
-    const [dd, last] = await Promise.all([read($, day), read($, libLast)]);
-    const full = dd?.key === key && dd.v === DAY_V ? dd : null;
+    const last = await read($, libLast);
     void ensure($, key); // no-op unless the date rolled over
 
     if (state.loading && !state.data)
@@ -356,36 +349,30 @@ export const register: Register = (on, options) => {
       return <Box paddingX={1}><Text color="red">✡ dl · {state.error}</Text></Box>;
     if (!state.data) return next(e);
 
-    // One line: the date opens the sidebar, each of today's sections opens it
-    // there, each collection in the Library continues where it was left (or
-    // 📚 Library opens it), and × hides the line for the rest of the day.
-    const { heb, sections } = state.data;
+    // One line, a launcher: the date, then Today's learning, the Library, and
+    // a continue button for each Library collection being read; × hides the
+    // line for the rest of the day.
+    const { heb } = state.data;
     const date = `✡ ${heb.hd} ${heb.hm} ${heb.hy}` + (heb.events.length ? ` · ${heb.events.join(", ")}` : "");
-    const shown = sections.filter(([l]) => !(full && BAND_TAB[l] && !hasText(full, BAND_TAB[l])));
+    const show = async (to: "read" | "library") => {
+      if (to === "read") void ensureDay($);
+      await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
+      if (to === "read") await update($, tab, () => null);
+      else await update($, libPos, () => ({}));
+      await update($, pageAtom, () => to);
+    };
     return (
-      <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={2}>
-        <Button key="open" plain label={date} onPress={() => openPane($)} />
-        {shown.map(([l, v]) => {
-          const t = BAND_TAB[l];
-          return t
-            ? <Button key={`row-${l}`} plain label={l} onPress={() => openPane($, t)} />
-            : <Text key={`row-${l}`} dimColor>{`${l} ${v}`}</Text>;
-        })}
-        {/* The Library: where each collection was left, or the Library itself. */}
-        <Text key="band-sep" dimColor>·</Text>
-        {(Object.keys(last ?? {}) as Coll[]).length
-          ? COLL_ORDER.filter((c) => last?.[c]).map((c) => (
-            <Button key={`band-lib-${c}`} plain label={`📚 ${lastLabel(last![c]!)}`} onPress={async () => {
-              await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
-              await continueLib($, c);
-              await update($, pageAtom, () => "library");
-            }} />
-          ))
-          : <Button key="band-library" plain label="📚 Library" onPress={async () => {
+      <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={3}>
+        <Text key="date" color="cyan">{date}</Text>
+        <Button key="band-today" plain label="📅 Today's learning" onPress={() => show("read")} />
+        <Button key="band-library" plain label="📚 Library" onPress={() => show("library")} />
+        {COLL_ORDER.filter((c) => last?.[c]).map((c) => (
+          <Button key={`band-lib-${c}`} plain label={`▶ ${lastLabel(last![c]!)}`} onPress={async () => {
             await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
-            await update($, libPos, () => ({}));
+            await continueLib($, c);
             await update($, pageAtom, () => "library");
-          }} />}
+          }} />
+        ))}
         <Button key="dismiss" plain role="dismiss" label="×" onPress={() => setHidden($, key)} />
       </Box>
     );
