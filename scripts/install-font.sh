@@ -49,7 +49,7 @@ put() {
 if [ "${1:-}" = "--remove" ]; then
   if [ -f "$cfg" ]; then
     tmp="$cfg.dl.$$"; strip > "$tmp"
-    put "$tmp" && echo "changed: removed the Hebrew font line from $cfg"
+    if put "$tmp"; then echo "changed: removed the Hebrew font line from $cfg"; fi
   fi
   exit 0
 fi
@@ -81,6 +81,8 @@ if [ "${TERM_PROGRAM:-}" = ghostty ] || [ -f "$cfg" ]; then
   else
     [ -s "$tmp" ] && echo >> "$tmp"
     printf '%s\n%s\n' "$mark" "$line" >> "$tmp"
-    put "$tmp" && echo "changed: mapped Ghostty's Hebrew to $family in $cfg"
+    if put "$tmp"; then echo "changed: mapped Ghostty's Hebrew to $family in $cfg"; fi
   fi
 fi
+# Nothing left to do is success, not an error: a run that changed nothing exits 0.
+exit 0

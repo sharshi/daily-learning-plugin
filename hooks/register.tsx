@@ -208,7 +208,8 @@ async function applyFont($: Host, choice: unknown) {
   try {
     const r = await $.process.run(argv, { timeoutMs: 30_000 });
     const changed = r.stdout.split("\n").filter((l) => l.startsWith("changed:"));
-    if (r.exitCode !== 0) $.ui.toast(`Daily Learning: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
+    if (r.exitCode !== 0)
+      $.ui.toast(`Daily Learning: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop() || `install-font.sh exited ${r.exitCode}`}`);
     else if (changed.length)
       $.ui.toast(`Daily Learning: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
   } catch (err: any) {
