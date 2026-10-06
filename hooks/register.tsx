@@ -180,10 +180,27 @@ function prefsOf(o: Record<string, unknown>): Prefs {
   };
 }
 
+// A setting's /config row key. Builds name plugin rows differently
+// (`dl.nikkud`, `dl@daily-learning.nikkud`, ...), so it's looked up in the
+// list by the owning plugin and the field rather than guessed.
+async function rowKey($: Host, field: string) {
+  const rows = await $.config.list();
+  const ours = (r: (typeof rows)[number]) => /^dl(@|$)/.test(String(r.provider?.plugin ?? "")) || /^dl[@.]/.test(r.key);
+  const tail = new RegExp(`(^|[^A-Za-z0-9_])${field}$`);
+  return (rows.find((r) => r.key === `dl.${field}`)
+    ?? rows.find((r) => ours(r) && tail.test(r.key))
+    ?? rows.find((r) => tail.test(r.key) && /(^|[^A-Za-z0-9_])dl([^A-Za-z0-9_]|$)/.test(r.key)))?.key;
+}
+
 // Change one setting as if in /config; say why when it can't be changed.
 async function setPref($: Host, field: string, value: string | boolean) {
   try {
-    const r = await $.config.set({ key: `dl.${field}`, value });
+    const key = await rowKey($, field);
+    if (!key) {
+      $.ui.toast(`Daily Learning: no /config row for ${field}; set it in /config instead.`);
+      return;
+    }
+    const r = await $.config.set({ key, value });
     if ("deny" in r && r.deny) $.ui.toast(`Daily Learning: couldn't change that setting: ${r.deny}`);
   } catch (err: any) {
     $.ui.toast(`Daily Learning: couldn't change that setting: ${err?.message || err}`);

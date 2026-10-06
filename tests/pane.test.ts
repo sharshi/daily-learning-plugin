@@ -15,6 +15,10 @@ const configSets: { key: string; value: unknown }[] = [];
 function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }, term = "ghostty", font?: string) {
   configSets.length = 0;
   on("config.set", async (_$, e: any) => { configSets.push({ key: e.key, value: e.value }); return { value: e.value } as never; });
+  // The rows as the Desktop app names them: <plugin>@<marketplace>.<field>.
+  on("config.list", async () => ({ value: ["hebrew_font", "english", "nikkud", "rashi", "text_size"].map((f) => ({
+    key: `dl@daily-learning.${f}`, label: f, kind: "choice", value: "", provider: { plugin: "dl@daily-learning", tier: "user" }, isLocked: false,
+  })) }) as never);
   if (font) on("fs.read", async () => ({ value: { base64: font } }) as never);
   on("env.get", async (_$, e: any) => ({ value: e.name === "TERM_PROGRAM" ? term : undefined }) as never);
   const store = new Map<string, unknown>();
@@ -92,7 +96,7 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   expect(t.some((x) => x.includes("deep sleep"))).toBe(false);
   // e writes the English setting, which reloads the mod with it.
   await ui.press({ key: "english" } as never);
-  expect(configSets).toContainEqual({ key: "dl.english", value: "Staggered" });
+  expect(configSets).toContainEqual({ key: "dl@daily-learning.english", value: "Staggered" });
 });
 
 test("English staggered: each verse, then its English, then Rashi and Rashi's English", { timeoutMs: 20000, options: { english: "Staggered" } }, async ($, on) => {
@@ -402,9 +406,9 @@ test("settings page: rows of choices that write the plugin's settings", { timeou
   await ui.press({ key: "set-hebrew_font-frank-ruhl" } as never);
   await ui.press({ key: "set-nikkud-off" } as never);
   expect(configSets).toEqual([
-    { key: "dl.english", value: "Side by side" },
-    { key: "dl.hebrew_font", value: "Frank Ruhl" },
-    { key: "dl.nikkud", value: false },
+    { key: "dl@daily-learning.english", value: "Side by side" },
+    { key: "dl@daily-learning.hebrew_font", value: "Frank Ruhl" },
+    { key: "dl@daily-learning.nikkud", value: false },
   ]);
   // A tab goes back to the text.
   await ui.press({ key: "tab-tanya" } as never);
