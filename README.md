@@ -18,7 +18,7 @@ Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3
 <img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
 
 - **One line above the prompt** with today's Hebrew date and the day's sections. Click a section to open its text; click **×** to hide the line until tomorrow.
-- **A sidebar** (`/dl`) with the full Hebrew text, laid out right to left:
+- **A sidebar** (`/dl`): today's learning as a menu of its sections, each opening into its full Hebrew text, laid out right to left:
   - Chumash with each verse's Rashi under it
   - Tehillim on the Chabad monthly cycle
   - The whole day's Tanya portion
@@ -52,14 +52,15 @@ In the sidebar:
 
 | Key | |
 |---|---|
-| `1`–`7` | Switch tab (sections with no text that day are left out) |
-| `e` | English: off → staggered → side by side |
-| `n` | Nikkud on or off |
-| `l` | Library, or back to today |
-| `s` | Settings page, or back to the text |
+| `t` | Today: the menu of the day's sections |
+| `l` | Library |
+| `s` | Settings |
+| `1`–`7` | Pick a section from today's menu (sections with no text that day are left out) |
 | `j` / `k` | Next / previous: perek (Rambam ×3), amud (Daf Yomi), or in the Library the next perek or daf |
 | `↑` `↓` | Scroll |
 | `Esc` | Back to the prompt |
+
+Inside a section of the day, a breadcrumb goes back to the menu and **‹ previous** / **next ›** step through the day's learning in order.
 
 ### Settings
 

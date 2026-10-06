@@ -44,7 +44,7 @@ declare module "claude-code" {
     dl: {
       day: Day | null;
       status: Status | null;
-      tab: TabId;
+      tab: TabId | null; // null: the menu of the day's sections
       // Which page the sidebar shows: the day's text, its settings, or the Library.
       page: "read" | "settings" | "library";
       // The Library: where the menu is, the collections loaded so far, the unit

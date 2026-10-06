@@ -49,7 +49,7 @@ test("libPart: a daf as its amudim with Rashi per passage; a one-amud daf as one
 });
 
 // The engine beneath the mod: Sefaria from the fixture, a store in memory.
-function host(on: On) {
+function host(on: On, term = "Apple_Terminal") {
   const store = new Map<string, unknown>();
   const fetched: string[] = [];
   on("store.get", async (_$, e: any) => ({ value: store.get(e.key) }) as never);
@@ -57,7 +57,7 @@ function host(on: On) {
   on("store.keys", async () => ({ value: [...store.keys()] }) as never);
   on("store.delete", async (_$, e: any) => { store.delete(e.key); return { value: undefined } as never; });
   on("ui.open", async () => ({ value: { isPlaced: true } }) as never);
-  on("env.get", async () => ({ value: "Apple_Terminal" }) as never); // reading order: text matches as written
+  on("env.get", async () => ({ value: term }) as never); // Apple_Terminal: reading order, text matches as written
   on("process.run", async () => ({ value: { exitCode: 0, stdout: JSON.stringify(day), stderr: "" } }) as never);
   on("http.fetch", async (_$, e: any) => {
     const url = decodeURIComponent(String(e.url));
@@ -134,4 +134,20 @@ test("Library: a daf shows both amudim, each passage with its Rashi", { timeoutM
   expect(shown.some((x) => x.includes(".ב") && x.includes("דף"))).toBe(true);
   expect(shown.some((x) => x.includes(":ב") && x.includes("דף"))).toBe(true);
   expect(t.filter((x) => x.props.color === "magenta").length).toBeGreaterThan(0); // Rashi
+});
+
+test("Library labels in Ghostty: the Hebrew in a button is reversed like the text", { timeoutMs: 30000 }, async ($, on) => {
+  const { clock } = host(on, "ghostty");
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "library" } as never);
+  // משניות drawn for a terminal with no right-to-left support: reversed.
+  expect((await ui.find({ key: "open-mishnah" }))?.text).toBe("Mishnayos · תוינשמ");
+  await ui.press({ key: "open-mishnah" } as never);
+  await clock.advance(1); await settle();
+  await ui.press({ key: "section-Seder-Zeraim" } as never);
+  await ui.press({ key: "book-Mishnah-Berakhot" } as never);
+  expect((await ui.find({ key: "unit-9" }))?.text).toBe("ט");
+  expect(bare((await ui.find({ key: "book-Mishnah-Berakhot" }))?.text ?? "")).toBe("");  // no such button on the perek grid
 });

@@ -42,20 +42,31 @@ function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: s
   return { opened, clock: mock.clock(on) };
 }
 
+// Open one of today's sections the way a reader does: 📅 Today, then the
+// section in the day's menu.
+async function openTab(ui: { find: (q: { key: string }) => Promise<unknown>; press: (t: never) => Promise<unknown> }, id: string) {
+  if (!(await ui.find({ key: `tab-${id}` }))) {
+    await ui.press({ key: "today" } as never);
+    if (await ui.find({ key: "crumb-today" })) await ui.press({ key: "crumb-today" } as never);
+  }
+  await ui.press({ key: `tab-${id}` } as never);
+}
+
 test("pane shows the Chumash text after /dl", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   for (const surface of ["terminal", "desktop"] as const) {
     const ui = await $.ui.mount({ plugin: "dl", surface, component: "Pane", requestId: "dl", props: PROPS as never });
+    await openTab(ui, "chumash");
     expect(JSON.stringify(await ui.drawn())).toContain("Bereshit");
     for (const tab of ["chumash", "tehillim", "tanya", "rambam1", "rambam3"]) {
-      await ui.press({ key: `tab-${tab}` } as never);
+      await openTab(ui, tab);
       const text = (await ui.findAll({ type: "Text" })).map((t) => t.text).join("\n");
       expect(text.length).toBeLessThan(100_000);
       expect(text).not.toContain("&thinsp;");
     }
-    await ui.press({ key: "tab-chumash" } as never);
+    await openTab(ui, "chumash");
   }
 });
 
@@ -64,6 +75,7 @@ test("pane loads its text by itself when drawn", { timeoutMs: 20000 }, async ($,
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   await clock.advance(1);
   await settle();
+  await openTab(ui, "chumash");
   expect(JSON.stringify(await ui.drawn())).toContain("Bereshit");
 });
 
@@ -83,6 +95,7 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(ui, "chumash");
   const texts = async () => (await ui.findAll({ type: "Text" })).map((t) => t.text);
   let t = await texts();
   // Rashi on 2:21 (מצלעותיו) sits after verse 2:21 and before verse 2:22.
@@ -94,8 +107,9 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   expect(r21).toBeGreaterThan(v21);
   expect(v22).toBeGreaterThan(r21);
   expect(t.some((x) => x.includes("deep sleep"))).toBe(false);
-  // e writes the English setting, which reloads the mod with it.
-  await ui.press({ key: "english" } as never);
+  // English is a setting: the settings page writes it, which reloads the mod with it.
+  await ui.press({ key: "settings" } as never);
+  await ui.press({ key: "set-english-staggered" } as never);
   expect(configSets).toContainEqual({ key: "dl@daily-learning.english", value: "Staggered" });
 });
 
@@ -104,6 +118,7 @@ test("English staggered: each verse, then its English, then Rashi and Rashi's En
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(ui, "chumash");
   const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text);
   const v21 = t.findIndex((x) => bare(x).startsWith("ויפל"));
@@ -122,6 +137,7 @@ test("English side by side: English in the left half, Hebrew in the right", { ti
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(ui, "chumash");
   const drawn = JSON.stringify(await ui.drawn());
   expect(drawn).toContain("deep sleep");
   // A pair is a row of two half-width columns: English first, Hebrew second.
@@ -141,7 +157,8 @@ test("Rambam ×3 has its text", { timeoutMs: 20000 }, async ($, on) => {
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-rambam3" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "rambam3");
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   expect(t).toContain("Rambam ×3");
   expect(t).not.toContain("Rambam ×1");
@@ -153,6 +170,7 @@ test("Hayom Yom is left out when its text did not load", { timeoutMs: 20000 }, a
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const pane = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(pane, "chumash");
   expect(await pane.find({ key: "tab-hayom" })).toBeUndefined();
   expect(JSON.stringify(await pane.drawn())).not.toContain("hayom yom text");
   const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
@@ -166,7 +184,8 @@ test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutM
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-rambam3" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "rambam3");
   const read = async () => {
     const texts = await ui.findAll({ type: "Text" });
     return {
@@ -201,7 +220,7 @@ test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutM
   expect((await read()).headings).toEqual(["פרק יג"]);
 
   // Rambam ×1 is a single perek: no perek buttons.
-  await ui.press({ key: "tab-rambam1" } as never);
+  await openTab(ui, "rambam1");
   expect(await ui.find({ key: "next-end" })).toBeUndefined();
   expect((await read()).headings).toEqual(["פרק ב"]);
 });
@@ -211,7 +230,8 @@ test("Tanya shows the whole day's portion", { timeoutMs: 20000 }, async ($, on) 
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-tanya" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "tanya");
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   expect(t).toContain("Tanya · 25 Tishrei (Iggeret HaKodesh 25:1-5)");
   const bare = t.replace(/[\u0591-\u05C7\u200F]/g, "");
@@ -244,6 +264,7 @@ for (const [term, reversed] of [["ghostty", true], ["Apple_Terminal", false]] as
     await $.command.run({ command: "dl", args: "" } as never);
     await settle();
     const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+    await openTab(ui, "chumash");
     const texts = (await ui.findAll({ type: "Text" })).map((t) => t.text.replace(/[֑-ׇ‎]/g, ""));
     // Genesis 2:20 opens ויקרא; reversed for Ghostty it reads ארקיו from the left.
     expect(texts.some((t) => t.includes(reversed ? "ארקיו" : "ויקרא"))).toBe(true);
@@ -256,7 +277,8 @@ test("Mac Terminal: words go right to left, letters as written, edge punctuation
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-rambam3" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "rambam3");
   const texts = await ui.findAll({ type: "Text" });
   const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
   // Terminal.app draws LRM/RLM/overrides as visible boxes: none may be sent.
@@ -281,7 +303,8 @@ test("each letter's dagesh and shin dot come before its vowel", { timeoutMs: 200
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-tehillim" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "tehillim");
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   // Psalm 119:1 בְּתוֹרַת: bet, dagesh, sheva (Sefaria has bet, sheva, dagesh).
   expect(t).toContain("בְּתוֹרַת");
@@ -295,7 +318,8 @@ test("Desktop: Hebrew wrapped and right-aligned, in reading order inside right-t
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-rambam3" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "rambam3");
   const texts = await ui.findAll({ type: "Text" });
   const label = texts.find((t) => t.props.bold && t.text.replace(/‏/g, "") === "א.");
   expect(label?.text).toBe("‏א.‏");
@@ -330,7 +354,8 @@ test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the 
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-daf" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "daf");
   const bare = (x: string) => x.replace(/[\u0591-\u05C7]/g, "");
   const texts = async () => (await ui.findAll({ type: "Text" })).map((t) => bare(t.text));
   let t = await texts();
@@ -355,7 +380,8 @@ test("Desktop: the body is one SVG with the chosen font embedded, Hebrew in read
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-rambam3" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "rambam3");
   const svgs = await ui.findAll({ type: "Svg" });
   expect(svgs.length).toBe(1);
   const src = String(svgs[0]!.props.source);
@@ -374,11 +400,12 @@ test("terminal: the header stays at the top of the window as the sidebar scrolls
   await settle();
   const scrolled = { ...PROPS, scroll: { offset: 12, bodyRows: 40 } };
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: scrolled as never });
+  await openTab(ui, "chumash");
   const header = await ui.find({ key: "header" });
   expect(header?.props.position).toBe("absolute");
   expect(header?.props.top).toBe(12);
   expect((await ui.find({ key: "blank" }))?.props.top).toBe(12);
-  await ui.press({ key: "tab-tanya" } as never);
+  await openTab(ui, "tanya");
   expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei");
 });
 
@@ -387,7 +414,8 @@ test("Daf Yomi with English: each passage's English under it", { timeoutMs: 2000
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
-  await ui.press({ key: "tab-daf" } as never);
+  await openTab(ui, "chumash");
+  await openTab(ui, "daf");
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text);
   expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(true);
 });
@@ -397,6 +425,7 @@ test("settings page: rows of choices that write the plugin's settings", { timeou
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(ui, "chumash");
   await ui.press({ key: "settings" } as never);
   // The current values are marked.
   expect((await ui.find({ key: "set-hebrew_font-shlomo" }))?.props.variant).toBe("primary");
@@ -411,7 +440,7 @@ test("settings page: rows of choices that write the plugin's settings", { timeou
     { key: "dl@daily-learning.nikkud", value: false },
   ]);
   // A tab goes back to the text.
-  await ui.press({ key: "tab-tanya" } as never);
+  await openTab(ui, "tanya");
   expect(await ui.find({ key: "set-english-off" })).toBeUndefined();
   expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei");
 });
@@ -421,6 +450,31 @@ test("rashi off: the Chumash shows no Rashi", { timeoutMs: 20000, options: { ras
   await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await openTab(ui, "chumash");
   const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
   expect(rashi.length).toBe(0);
+});
+
+test("Today is a menu: each section with what it is today; inside, back and on through the day", { timeoutMs: 20000 }, async ($, on) => {
+  host(on);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  // The menu: today's sections, Hayom Yom left out (no text today), each with its reading.
+  for (const id of ["chumash", "tehillim", "tanya", "rambam1", "rambam3", "daf"]) expect(await ui.find({ key: `tab-${id}` })).toBeDefined();
+  expect(await ui.find({ key: "tab-hayom" })).toBeUndefined();
+  expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei (Iggeret HaKodesh 25:1-5)");
+  // No English or nikkud buttons in the header: those are settings now.
+  expect(await ui.find({ key: "english" })).toBeUndefined();
+  expect(await ui.find({ key: "nikkud" })).toBeUndefined();
+  await ui.press({ key: "tab-tehillim" } as never);
+  expect((await ui.find({ key: "day-next" }))?.text).toContain("Tanya");
+  expect((await ui.find({ key: "day-prev" }))?.text).toContain("Chumash");
+  await ui.press({ key: "day-next" } as never);
+  expect(JSON.stringify(await ui.drawn())).toContain("Iggeret HaKodesh 25:1-5");
+  await ui.press({ key: "crumb-today" } as never);
+  expect(await ui.find({ key: "tab-chumash" })).toBeDefined();
+  // The last section's "next" goes back to the menu.
+  await ui.press({ key: "tab-daf" } as never);
+  expect(await ui.find({ key: "day-done" })).toBeDefined();
 });

@@ -26,7 +26,7 @@ const TABS: [TabId, string][] = [
 // ---- pane state ---------------------------------------------------------
 const day = atom({ plugin: "dl", key: "day" } as const, null);
 const status = atom({ plugin: "dl", key: "status" } as const, null);
-const tab = atom({ plugin: "dl", key: "tab" } as const, "chumash");
+const tab = atom({ plugin: "dl", key: "tab" } as const, null);
 const pageAtom = atom({ plugin: "dl", key: "page" } as const, "read");
 const libPos = atom({ plugin: "dl", key: "libPos" } as const, {});
 const libShapes = atom({ plugin: "dl", key: "libShapes" } as const, {});
@@ -143,8 +143,9 @@ const BAND_TAB: Record<string, TabId> = {
   "Rambam ×3": "rambam3", "Rambam ×1": "rambam1", "Hayom Yom": "hayom", "Daf Yomi": "daf",
 };
 
+// Open the sidebar on a section of the day, or on the day's menu.
 async function openPane($: Host, t?: TabId) {
-  if (t) await update($, tab, () => t);
+  await update($, tab, () => t ?? null);
   await update($, pageAtom, () => "read");
   void ensureDay($);
   await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
@@ -371,7 +372,7 @@ export const register: Register = (on, options) => {
   // /dl opens the sidebar and fetches the text in the background.
   on("command.run", { command: "dl" }, async ($) => {
     await openPane($);
-    return { text: "Opened the sidebar. Keys: number keys for tabs · l Library · e English · n nikkud · s settings · j/k next/previous · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Opened the sidebar. Keys: t Today · l Library · s Settings · number keys pick from today's menu · j/k next/previous · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
@@ -498,6 +499,8 @@ export const register: Register = (on, options) => {
     // where a collection was last read; next and previous cross into the
     // next book.
     const library = () => {
+      // Hebrew in a label goes through the surface's ordering, like the text.
+      const heb = (x: string) => order(x.split(" "));
       const pos = lp ?? {};
       const go = (p: typeof pos) => update($, libPos, () => p);
       const coll = pos.coll;
@@ -540,7 +543,7 @@ export const register: Register = (on, options) => {
         ...COLL_ORDER.map((c) => (
           <Box key={`coll-${c}`} flexDirection="column" marginBottom={1}>
             <Box flexDirection="row">
-              <Button key={`open-${c}`} label={`${COLLS[c].name} · ${COLLS[c].he}`} onPress={() => go({ coll: c })} />
+              <Button key={`open-${c}`} label={`${COLLS[c].name} · ${heb(COLLS[c].he)}`} onPress={() => go({ coll: c })} />
               {cont(c)}
             </Box>
             <Text dimColor>{COLLS[c].blurb}</Text>
@@ -555,7 +558,7 @@ export const register: Register = (on, options) => {
         head,
         <Box key="cont" flexDirection="row">{cont(coll)}</Box>,
         ...shape.sections.map((sec) => (
-          <Button key={`section-${sec.name.replace(/\W+/g, "-")}`} label={`${sec.name} · ${sec.he}  (${sec.books.length})`}
+          <Button key={`section-${sec.name.replace(/\W+/g, "-")}`} label={`${sec.name} · ${heb(sec.he)}  (${sec.books.length})`}
             onPress={() => go({ coll, section: sec.name })} />
         )),
       ];
@@ -567,7 +570,7 @@ export const register: Register = (on, options) => {
           head,
           ...(sec?.books ?? []).map((b) => (
             <Button key={`book-${b.title.replace(/\W+/g, "-")}`}
-              label={`${b.name} · ${b.he}  (${b.last - b.first + 1} ${COLLS[coll].unit === "daf" ? "dapim" : "perakim"})`}
+              label={`${b.name} · ${heb(b.he)}  (${b.last - b.first + 1} ${COLLS[coll].unit === "daf" ? "dapim" : "perakim"})`}
               variant={ll?.[coll]?.book === b.title ? "primary" : "secondary"}
               onPress={() => go({ coll, section, book: b.title })} />
           )),
@@ -579,10 +582,10 @@ export const register: Register = (on, options) => {
         const lastHere = ll?.[coll]?.book === book.title ? ll[coll]!.unit : undefined;
         return [
           head,
-          <Text key="pick" dimColor>{book.he} · {book.name}: pick a {COLLS[coll].unit}</Text>,
+          <Text key="pick" dimColor>{book.name} · {heb(book.he)}: pick a {COLLS[coll].unit}</Text>,
           <Box key="grid" flexDirection="row" flexWrap="wrap">
             {Array.from({ length: book.last - book.first + 1 }, (_, i) => book.first + i).map((u) => (
-              <Button key={`unit-${u}`} label={unitName(coll, u).split(" ")[1]!}
+              <Button key={`unit-${u}`} label={heb(unitName(coll, u).split(" ")[1]!)}
                 variant={u === lastHere ? "primary" : "secondary"} dimColor={u !== lastHere}
                 onPress={() => openUnit($, coll, book, u)} />
             ))}
@@ -614,6 +617,20 @@ export const register: Register = (on, options) => {
       ];
     };
 
+    const openTab = async (id: TabId | null) => { await update($, tab, () => id); await update($, pageAtom, () => "read"); };
+
+    // Today: a menu of the day's sections, each with what it is today.
+    const todayMenu = (shown: [TabId, string][]) => [
+      <Text key="today-title" bold>Today's learning</Text>,
+      <Text key="today-sp"> </Text>,
+      ...shown.map(([id, label], i) => (
+        <Box key={`today-${id}`} flexDirection="column" marginBottom={1}>
+          <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)} onPress={() => openTab(id)} />
+          <Text dimColor wrap="truncate">  {d!.parts[id]?.[0]?.title ?? ""}</Text>
+        </Box>
+      )),
+    ];
+
     const body = () => {
       if (pg === "settings") return settings();
       if (pg === "library") return library();
@@ -621,11 +638,29 @@ export const register: Register = (on, options) => {
         if (st?.phase === "error") return <Text color="red">Could not load: {st.error}</Text>;
         return <Text dimColor>Loading today's text… (the first fetch takes a little while)</Text>;
       }
-      // A tab kept from an older build, or one hidden for lack of text, falls back to Chumash.
-      const tabId: TabId = shownTabs(d).some(([id]) => id === t) ? t : "chumash";
+      const shown = shownTabs(d);
+      // No section chosen (or one hidden today, or kept from an older build): the menu.
+      const ti = shown.findIndex(([id]) => id === t);
+      if (ti < 0) return todayMenu(shown);
+      const tabId = shown[ti]![0];
       const parts = d.parts[tabId] ?? [];
-      if (!parts.length) return <Text dimColor>Nothing listed for this today.</Text>;
-      return parts.map((p, pi) => {
+      // Back to the menu, and on to the day's previous or next section.
+      const crumbs = (
+        <Box key="today-crumbs" flexDirection="row" marginBottom={1}>
+          <Button key="crumb-today" plain label="📅 Today" onPress={() => openTab(null)} />
+          <Text dimColor> › </Text><Text>{shown[ti]![1]}</Text>
+        </Box>
+      );
+      const prevTab = shown[ti - 1], nextTab = shown[ti + 1];
+      const dayNav = (
+        <Box key="day-nav" flexDirection="row" justifyContent="space-between" marginTop={1}>
+          {prevTab ? <Button key="day-prev" plain label={`‹ ${prevTab[1]}`} onPress={() => openTab(prevTab[0])} /> : <Text> </Text>}
+          {nextTab ? <Button key="day-next" plain variant="primary" label={`${nextTab[1]} ›`} onPress={() => openTab(nextTab[0])} />
+            : <Button key="day-done" plain label="Today's menu ›" onPress={() => openTab(null)} />}
+        </Box>
+      );
+      if (!parts.length) return [crumbs, <Text key="none" dimColor>Nothing listed for this today.</Text>, dayNav];
+      return [crumbs, ...parts.map((p, pi) => {
         const sections = p.sections ?? [];
         const n = sections.length;
         const at = Math.min(pk?.key === d.key ? pk.at[tabId] ?? 0 : 0, Math.max(n - 1, 0));
@@ -657,7 +692,7 @@ export const register: Register = (on, options) => {
             {nav("end")}
           </Box>
         );
-      });
+      }), dayNav];
     };
 
     const hebDate = d?.hebrew ? cleanHe(d.hebrew, nk) : "";
@@ -675,38 +710,24 @@ export const register: Register = (on, options) => {
       if (row.length) rows.push(row);
       return rows;
     };
-    const tabRows = pack(shownTabs(d).map((x, i) => [...x, i] as const), ([, label]) => label.length + 4);
-    // e steps English through off, staggered and side by side; n turns nikkud
-    // on or off; s opens the settings page (or goes back to the text).
-    const englishLabel = { off: "off", staggered: "staggered", side: "side by side" }[prefs.english];
-    const nextEnglish = { off: "Staggered", staggered: "Side by side", side: "Off" }[prefs.english];
-    const toggleItems: [string, () => unknown, string][] = [
-      ["english", () => setPref($, "english", nextEnglish), `English: ${englishLabel}`],
-      ["nikkud", () => setPref($, "nikkud", !nk), `nikkud: ${nk ? "on" : "off"}`],
-      ["library", () => update($, pageAtom, (v) => v === "library" ? "read" : "library"), pg === "library" ? "‹ today" : "📚 library"],
-      ["settings", () => update($, pageAtom, (v) => v === "settings" ? "read" : "settings"), pg === "settings" ? "‹ text" : "⚙ settings"],
+    // Where to go: today's learning, the Library, the settings. The current one is marked.
+    const navItems: [string, string, "read" | "library" | "settings", string][] = [
+      ["today", "📅 Today", "read", "t"], ["library", "📚 Library", "library", "l"], ["settings", "⚙ Settings", "settings", "s"],
     ];
-    const hotkeys: Record<string, string> = { english: "e", nikkud: "n", library: "l", settings: "s" };
-    const toggles = toggleItems.map(([key, press, label]) => [
-      <Button key={key} plain hotkey={hotkeys[key]} label={label} onPress={press} />, label.length + 5,
-    ] as const);
-    const toggleRows = pack(toggles, ([, w]) => w);
+    const navRows = pack(navItems, ([, label]) => label.length + 4);
     const header = [
       <Box key="date" flexDirection="row" justifyContent="space-between">
         <Text color="cyan" bold wrap="truncate">✡ {d?.title ?? "Daily Learning"}</Text>
         {hebDate ? <Text color="cyan" wrap="truncate">{order(hebDate.split(" "))}</Text> : null}
       </Box>,
-      ...tabRows.map((row, r) => (
-        <Box key={`tabs${r}`} flexDirection="row">
-          {row.map(([id, label, i]) => (
-            <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)}
-              variant={id === t ? "primary" : "secondary"} dimColor={id !== t}
-              onPress={async () => { await update($, tab, () => id); await update($, pageAtom, () => "read"); }} />
+      ...navRows.map((row, r) => (
+        <Box key={`nav${r}`} flexDirection="row">
+          {row.map(([key, label, to, hotkey]) => (
+            <Button key={key} label={label} hotkey={hotkey}
+              variant={pg === to ? "primary" : "secondary"} dimColor={pg !== to}
+              onPress={() => to === "read" && pg === "read" ? openTab(null) : update($, pageAtom, () => to)} />
           ))}
         </Box>
-      )),
-      ...toggleRows.map((row, r) => (
-        <Box key={`toggles${r}`} flexDirection="row" gap={2}>{row.map(([b]) => b)}</Box>
       )),
       e.surface === "terminal" ? <Text key="rule" dimColor>{"─".repeat(width)}</Text> : <Text key="rule"> </Text>,
     ];
