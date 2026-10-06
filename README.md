@@ -13,7 +13,7 @@ In a Claude Code session:
 
 Then `/dl` opens the sidebar. Needs Claude Code 2.1.286+ and `python3`.
 
-<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
+![Daily Learning in the Claude Desktop app: the sidebar showing today's Tanya, Hebrew and English side by side, with the line above the prompt](docs/screenshot.png)
 
 ## Today
 
