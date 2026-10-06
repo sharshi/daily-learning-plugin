@@ -62,6 +62,9 @@ function host(on: On, term = "Apple_Terminal") {
   on("http.fetch", async (_$, e: any) => {
     const url = decodeURIComponent(String(e.url));
     fetched.push(url);
+    // The band's date and calendar.
+    if (url.includes("hebcal.com")) return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ hd: 25, hm: "Tishrei", hy: 5787, hebrew: "", events: ["Parashat Bereshit"] }) } } as never;
+    if (url.includes("/api/calendars")) return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ calendar_items: [{ title: { en: "Tanya Yomi" }, displayValue: { en: "25 Tishrei" } }] }) } } as never;
     const m = /\/api\/shape\/(.+)$/.exec(url) ?? /\/api\/v3\/texts\/([^?]+)/.exec(url);
     const body = url.includes("/api/shape/") ? F.shapes[m![1]!] : F.texts[m![1]!];
     return { value: body ? { status: 200, ok: true, headers: {}, text: JSON.stringify(body) } : { status: 404, ok: false, headers: {}, text: "" } } as never;
@@ -80,7 +83,7 @@ test("Library: menu down to a perek, loaded only as opened, next crosses masecht
 
   await ui.press({ key: "library" } as never);
   expect(await ui.find({ key: "open-mishnah" })).toBeDefined();
-  expect(fetched.filter((u) => u.includes("sefaria"))).toEqual([]); // nothing until a collection opens
+  expect(fetched.filter((u) => /sefaria\.org\/api\/(shape|v3)/.test(u))).toEqual([]); // nothing until a collection opens
 
   await ui.press({ key: "open-mishnah" } as never);
   await tick();
@@ -150,4 +153,35 @@ test("Library labels in Ghostty: the Hebrew in a button is reversed like the tex
   await ui.press({ key: "book-Mishnah-Berakhot" } as never);
   expect((await ui.find({ key: "unit-9" }))?.text).toBe("ט");
   expect(bare((await ui.find({ key: "book-Mishnah-Berakhot" }))?.text ?? "")).toBe("");  // no such button on the perek grid
+});
+
+test("the line above the prompt: today's sections, then 📚 the Library, then where each collection was left", { timeoutMs: 30000 }, async ($, on) => {
+  const { clock } = host(on);
+  const tick = async () => { await clock.advance(1); await settle(); };
+  on("command.register", async () => ({ value: undefined }) as never);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
+  await settle();
+  // Nothing read yet: one button that opens the Library.
+  expect(await band.find({ key: "band-library" })).toBeDefined();
+  expect(await band.find({ key: "row-Tanya" })).toBeDefined();
+
+  // Read Berakhot 9 in the Library; the line then offers to continue it.
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "library" } as never);
+  await ui.press({ key: "open-mishnah" } as never);
+  await tick();
+  await ui.press({ key: "section-Seder-Zeraim" } as never);
+  await ui.press({ key: "book-Mishnah-Berakhot" } as never);
+  await ui.press({ key: "unit-9" } as never);
+  await tick();
+  expect((await band.find({ key: "band-lib-mishnah" }))?.text).toBe("📚 Berakhot 9");
+  expect(await band.find({ key: "band-library" })).toBeUndefined();
+
+  // Elsewhere in the sidebar, the band's button goes straight back to it.
+  await ui.press({ key: "today" } as never);
+  await band.press({ key: "band-lib-mishnah" } as never);
+  await tick();
+  expect(JSON.stringify(await ui.drawn())).toContain("Mishnayos · Berakhot 9");
 });

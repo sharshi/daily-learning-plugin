@@ -241,6 +241,20 @@ async function openUnit($: Host, coll: Coll, b: LibBook, unit: number) {
   void ensureLibText($, coll, b, unit);
 }
 
+// Where a collection was last read, as "Ketubot 5" (the book's short name).
+const lastLabel = (l: { book: string; unit: number }) => `${l.book.replace(/^(Mishnah|Mishneh Torah,) /, "")} ${l.unit}`;
+
+// Continue a collection where it was left: load its structure if need be,
+// open the unit, and show it in the Library.
+async function continueLib($: Host, c: Coll) {
+  const l = (await read($, libLast))[c];
+  if (!l) return;
+  await ensureShape($, c);
+  const sh = (await read($, libShapes))[c];
+  const bk = sh ? findBook(sh, l.book) : undefined;
+  if (bk) await openUnit($, c, bk, l.unit);
+}
+
 // ---- settings -------------------------------------------------------------
 // The sidebar's settings are the plugin's own (userConfig): they persist, show
 // in /config, and the settings page changes them with $.config.set, which
@@ -332,7 +346,7 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const key = todayKey();
     if (hiddenFor === key) return next(e);
-    const dd = await read($, day);
+    const [dd, last] = await Promise.all([read($, day), read($, libLast)]);
     const full = dd?.key === key && dd.v === DAY_V ? dd : null;
     void ensure($, key); // no-op unless the date rolled over
 
@@ -342,8 +356,9 @@ export const register: Register = (on, options) => {
       return <Box paddingX={1}><Text color="red">✡ dl · {state.error}</Text></Box>;
     if (!state.data) return next(e);
 
-    // One line: the date opens the sidebar, each section opens its tab, Daf
-    // Yomi (no tab) is text, and × hides the line for the rest of the day.
+    // One line: the date opens the sidebar, each of today's sections opens it
+    // there, each collection in the Library continues where it was left (or
+    // 📚 Library opens it), and × hides the line for the rest of the day.
     const { heb, sections } = state.data;
     const date = `✡ ${heb.hd} ${heb.hm} ${heb.hy}` + (heb.events.length ? ` · ${heb.events.join(", ")}` : "");
     const shown = sections.filter(([l]) => !(full && BAND_TAB[l] && !hasText(full, BAND_TAB[l])));
@@ -356,6 +371,21 @@ export const register: Register = (on, options) => {
             ? <Button key={`row-${l}`} plain label={l} onPress={() => openPane($, t)} />
             : <Text key={`row-${l}`} dimColor>{`${l} ${v}`}</Text>;
         })}
+        {/* The Library: where each collection was left, or the Library itself. */}
+        <Text key="band-sep" dimColor>·</Text>
+        {(Object.keys(last ?? {}) as Coll[]).length
+          ? COLL_ORDER.filter((c) => last?.[c]).map((c) => (
+            <Button key={`band-lib-${c}`} plain label={`📚 ${lastLabel(last![c]!)}`} onPress={async () => {
+              await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
+              await continueLib($, c);
+              await update($, pageAtom, () => "library");
+            }} />
+          ))
+          : <Button key="band-library" plain label="📚 Library" onPress={async () => {
+            await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
+            await update($, libPos, () => ({}));
+            await update($, pageAtom, () => "library");
+          }} />}
         <Button key="dismiss" plain role="dismiss" label="×" onPress={() => setHidden($, key)} />
       </Box>
     );
@@ -528,13 +558,8 @@ export const register: Register = (on, options) => {
         const l = ll?.[c];
         if (!l) return null;
         const s2 = shapes?.[c], b2 = s2 ? findBook(s2, l.book) : undefined;
-        const label = b2 ? `Continue ${unitLabel(b2, l.unit)}` : `Continue ${l.book.replace(/^(Mishnah|Mishneh Torah,) /, "")} ${l.unit}`;
-        return <Button key={`continue-${c}`} variant="primary" label={label} onPress={async () => {
-          await ensureShape($, c);
-          const sh = (await read($, libShapes))[c];
-          const bk = sh ? findBook(sh, l.book) : undefined;
-          if (bk) await openUnit($, c, bk, l.unit);
-        }} />;
+        const label = b2 ? `Continue ${unitLabel(b2, l.unit)}` : `Continue ${lastLabel(l)}`;
+        return <Button key={`continue-${c}`} variant="primary" label={label} onPress={() => continueLib($, c)} />;
       };
 
       // Collections.

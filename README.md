@@ -17,7 +17,7 @@ Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3
 
 <img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
 
-- **One line above the prompt** with today's Hebrew date and the day's sections. Click a section to open its text; click **×** to hide the line until tomorrow.
+- **One line above the prompt** with today's Hebrew date, the day's sections, and 📚 where you left each Library collection. Click any of them to open it in the sidebar; click **×** to hide the line until tomorrow.
 - **A sidebar** (`/dl`): today's learning as a menu of its sections, each opening into its full Hebrew text, laid out right to left:
   - Chumash with each verse's Rashi under it
   - Tehillim on the Chabad monthly cycle
@@ -37,7 +37,7 @@ Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3
 - **`/dl:text`** prints the day's text into the conversation, where you can ask Claude about it.
 
 ```
-✡ 25 Tishrei 5787 · Parashat Bereshit  Chumash  Tehillim  Tanya  Rambam ×3  Rambam ×1  Daf Yomi  ×
+✡ 25 Tishrei 5787 · Parashat Bereshit  Chumash  Tehillim  Tanya  Rambam ×3  Rambam ×1  Daf Yomi  ·  📚 Ketubot 5  ×
 ```
 
 ## Use
