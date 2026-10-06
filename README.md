@@ -13,8 +13,6 @@ In a Claude Code session, run:
 
 Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3`. To try it for one session from a clone instead: `claude --plugin-dir ./daily-learning-plugin`.
 
-<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/2ac93e6f-2334-4886-beb0-071f204dd5ad" />
-
 ## What it does
 
 <img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
