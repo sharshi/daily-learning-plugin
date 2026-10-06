@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Daily Learning Plugin</title>
-<meta name="description" content="A Claude Code mod for the daily learning: Chitas, Rambam, Hayom Yom and Daf Yomi above the prompt, and the full Hebrew text in a sidebar.">
+<meta name="description" content="Your daily learning inside Claude Code: today's Chitas, Rambam, Hayom Yom and Daf Yomi, and a Library of Mishnayos, Shas and Mishneh Torah, in Hebrew that reads right.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -129,7 +129,8 @@
   <header class="top">
     <div class="brand"><span class="star">✡</span> Daily Learning Plugin</div>
     <nav>
-      <a href="#features">Features</a>
+      <a href="#today">Today</a>
+      <a href="#library">Library</a>
       <a href="#install">Install</a>
       <a href="#terminals">Terminals</a>
       <a href="https://github.com/sharshi/daily-learning-plugin">GitHub</a>
@@ -138,7 +139,7 @@
 
   <div class="hero">
     <h1>Your daily learning, inside Claude Code.<span class="he">חת״ת · רמב״ם · היום יום · דף יומי</span></h1>
-    <p class="lead">A Claude Code mod that puts today's Chitas, Rambam, Hayom Yom and Daf Yomi on one line above the prompt, and the full Hebrew text, with Rashi and an English toggle, in a sidebar.</p>
+    <p class="lead">Today's Chitas, Rambam, Hayom Yom and Daf Yomi, and a Library of Mishnayos, Shas and Mishneh Torah to learn through at your own pace, in Hebrew that reads right, beside your Claude Code session.</p>
     <div class="cta">
       <a class="btn primary" href="#install">Install</a>
       <a class="btn" href="https://github.com/sharshi/daily-learning-plugin">View on GitHub</a>
@@ -151,38 +152,62 @@
   <p class="caption">The sidebar beside a Claude Code session.</p>
 </div>
 
-<section id="features">
+<section id="today">
   <div class="wrap">
-    <h2>One line, then the whole day's text</h2>
-    <p class="sub">The line above the prompt shows the Hebrew date and the day's sections. Click a section to open it in the sidebar; click × to hide the line until tomorrow.</p>
+    <h2>Today</h2>
+    <p class="sub">One line above the prompt holds the day. Click a section, or 📚 where you left the Library, and it opens in the sidebar; × hides it until tomorrow.</p>
     <div class="band" role="img" aria-label="Example of the line above the prompt">
       <span class="date">✡ 25 Tishrei 5787 · Parashat Bereshit</span>
       <span class="sec">Chumash</span><span class="sec">Tehillim</span><span class="sec">Tanya</span>
       <span class="sec">Rambam ×3</span><span class="sec">Rambam ×1</span><span class="sec">Daf Yomi</span>
+      <span class="muted">·</span><span class="sec">📚 Ketubot 5</span>
       <span class="x">×</span>
     </div>
-
     <div class="grid" style="margin-top:18px">
       <div class="card">
         <h3>Chumash with Rashi</h3>
-        <p>The day's aliyah, each verse followed by its Rashi, with Rashi's English from Rosenbaum &amp; Silbermann.</p>
+        <p>The day's aliyah, Rashi under each verse.</p>
         <p class="he">וַיַּפֵּל יְהֹוָה אֱלֹהִים תַּרְדֵּמָה עַל־הָאָדָם</p>
         <p class="rashi">מצלעותיו. מִסְּטָרָיו</p>
       </div>
       <div class="card">
         <h3>Tehillim and Tanya</h3>
-        <p>Tehillim on the Chabad monthly cycle, and the whole day's Tanya portion, not just where it starts.</p>
+        <p>Tehillim on the Chabad monthly cycle; the whole day's Tanya portion.</p>
         <p class="he">אַשְׁרֵי תְמִימֵי־דָרֶךְ</p>
       </div>
       <div class="card">
-        <h3>Rambam, one perek at a time</h3>
-        <p>Rambam ×1 and ×3, each halacha numbered, with next and previous perek.</p>
+        <h3>Rambam</h3>
+        <p>×1 and ×3, perek by perek, each halacha numbered.</p>
         <p class="he"><b>א.</b> הַחוֹפֵר בּוֹר בִּרְשׁוּת הָרַבִּים</p>
       </div>
       <div class="card">
         <h3>Daf Yomi</h3>
-        <p>The daf one amud at a time, each passage with its Rashi, English on the toggle.</p>
+        <p>Amud by amud, Rashi on each passage.</p>
         <p class="he">דף יח.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="library">
+  <div class="wrap">
+    <h2>Library</h2>
+    <p class="sub">Whole works, at your own pace. Pick a collection, a seder or sefer, a masechta or hilchos, then a perek or daf. Continue picks up where you left each one, and next runs straight on into the next masechta.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Mishnayos</h3>
+        <p>63 masechtos, perek by perek.</p>
+        <p class="he">משניות</p>
+      </div>
+      <div class="card">
+        <h3>Shas</h3>
+        <p>The Bavli daf by daf, with Rashi.</p>
+        <p class="he">ש״ס בבלי</p>
+      </div>
+      <div class="card">
+        <h3>Mishneh Torah</h3>
+        <p>14 sefarim, hilchos perek by perek.</p>
+        <p class="he">משנה תורה</p>
       </div>
     </div>
   </div>
@@ -191,7 +216,7 @@
 <section id="sample">
   <div class="wrap">
     <h2>Hebrew that reads right</h2>
-    <p class="sub">Right to left, with nikkud placed correctly, in Frank Ruhl Libre or Shlomo. Te'amim are left out; nikkud and English are toggles.</p>
+    <p class="sub">Right to left, nikkud in place, in Frank Ruhl or Shlomo. English off, under each paragraph, or side by side, all on the sidebar's Settings page.</p>
     <div class="sample">
       <div class="head"><b>Rambam ×3 · Damages to Property 12–14</b><span class="nav">‹ perek · perek 1 of 3 · next perek יג ›</span></div>
       <div class="perek">פרק יב</div>
@@ -212,17 +237,15 @@
       <table>
         <tr><th>Command</th><th>What it does</th></tr>
         <tr><td><code>/dl</code></td><td>Open the sidebar</td></tr>
-        <tr><td><code>/dl-toggle</code></td><td>Hide the line above the prompt for today, or bring it back</td></tr>
+        <tr><td><code>/dl-toggle</code></td><td>Hide or show the line above the prompt</td></tr>
         <tr><td><code>/dl:text</code></td><td>Print the day's text in the conversation, to ask Claude about it</td></tr>
       </table>
     </div>
     <p style="margin-top:22px"><b>In the sidebar</b></p>
     <div class="keys">
-      <div><kbd>1</kbd>–<kbd>7</kbd> switch tab</div>
-      <div><kbd>e</kbd> English on or off</div>
-      <div><kbd>n</kbd> nikkud on or off</div>
-      <div><kbd>j</kbd> <kbd>k</kbd> next / previous perek or amud</div>
-      <div><kbd>↑</kbd> <kbd>↓</kbd> scroll</div>
+      <div><kbd>t</kbd> <kbd>l</kbd> <kbd>s</kbd> Today, Library, Settings</div>
+      <div><kbd>1</kbd>–<kbd>7</kbd> a section from today's menu</div>
+      <div><kbd>j</kbd> <kbd>k</kbd> next / previous</div>
       <div><kbd>Esc</kbd> back to the prompt</div>
     </div>
   </div>
@@ -237,10 +260,10 @@
         <tr><th>Where</th><th>How it reads</th></tr>
         <tr><td><b>Claude Desktop</b> (Code tab)</td><td>Best. Each reading is drawn with the chosen Hebrew font built in, laid out by the app's own text engine.</td></tr>
         <tr><td><b>Ghostty</b>, and terminals without right-to-left support</td><td>Very good. The mod places every letter itself; the Hebrew font setting maps Ghostty's Hebrew to the bundled font.</td></tr>
-        <tr><td><b>macOS Terminal</b></td><td>Best effort. Terminal reorders Hebrew on its own; turn nikkud off for the cleanest lines.</td></tr>
+        <tr><td><b>macOS Terminal</b></td><td>Best effort. Terminal reorders Hebrew on its own; turning nikkud off in Settings gives the cleanest lines.</td></tr>
       </table>
     </div>
-    <p style="margin-top:18px;color:var(--muted)">Choose <b>Frank Ruhl</b> (the default) or <b>Shlomo</b> under <code>/config</code> → dl → Hebrew font, or <b>System</b> to leave fonts alone.</p>
+    <p style="margin-top:18px;color:var(--muted)">Choose <b>Frank Ruhl</b> (the default) or <b>Shlomo</b> on the Settings page, or <b>System</b> to leave fonts alone.</p>
   </div>
 </section>
 

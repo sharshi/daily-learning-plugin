@@ -1,129 +1,82 @@
 # Daily Learning Plugin
 
-**[Website](https://www.sharshi.com/daily-learning-plugin/)** · A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) (`dl`) for the daily learning: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam (1 and 3 perakim), Hayom Yom and Daf Yomi.
+Your daily learning inside [Claude Code](https://code.claude.com/docs/en/plugins/mods/overview): today's Chitas, Rambam, Hayom Yom and Daf Yomi, and a Library of Mishnayos, Shas and Mishneh Torah to learn through at your own pace, in Hebrew that reads right. · **[Website](https://www.sharshi.com/daily-learning-plugin/)**
 
 ## Install
 
-In a Claude Code session, run:
+In a Claude Code session:
 
 ```
 /plugin marketplace add sharshi/daily-learning-plugin
 /plugin install dl@daily-learning
 ```
 
-Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3`. To try it for one session from a clone instead: `claude --plugin-dir ./daily-learning-plugin`.
+Then `/dl` opens the sidebar. Needs Claude Code 2.1.286+ and `python3`.
 
-## What it does
+<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/2ac93e6f-2334-4886-beb0-071f204dd5ad" />
 
-<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
-
-- **One line above the prompt** with today's Hebrew date, the day's sections, and 📚 where you left each Library collection. Click any of them to open it in the sidebar; click **×** to hide the line until tomorrow.
-- **A sidebar** (`/dl`): today's learning as a menu of its sections, each opening into its full Hebrew text, laid out right to left:
-  - Chumash with each verse's Rashi under it
-  - Tehillim on the Chabad monthly cycle
-  - The whole day's Tanya portion
-  - Rambam ×1 and Rambam ×3, one perek at a time, each halacha numbered **א. ב. ג.**
-  - Daf Yomi, one amud at a time, each passage with its Rashi
-  - Hayom Yom, when Sefaria has its text
-  - English off, **staggered** (under each paragraph) or **side by side** (English left, Hebrew right), Rashi's included (Rosenbaum & Silbermann's translation; Sefaria has no English for Rashi on the Gemara); nikkud and Rashi can be turned off; te'amim are left out.
-  - A **⚙ settings** page for font, English, nikkud, Rashi and text size.
-  - In the terminal, the date, tabs and toggles stay at the top as the text scrolls.
-- **A Library** (📚, key `l`) for learning through whole works at your own pace:
-  - **Mishnayos**: six sedarim, 63 masechtos, perek by perek, each mishnah numbered
-  - **Shas**: Talmud Bavli daf by daf, both amudim, each passage with its Rashi
-  - **Mishneh Torah**: the Rambam's 14 sefarim, hilchos perek by perek
-  - The menu goes collection › seder or sefer › masechta or hilchos › perek or daf, with breadcrumbs back up. **Continue** returns to where you left each one; next and previous cross into the next masechta; the last one read is marked.
-  - Loaded lazily from Sefaria: a collection's list when you open it (then kept), a perek or daf when you read it (the last 12 kept).
-- **`/dl:text`** prints the day's text into the conversation, where you can ask Claude about it.
+## Today
 
 ```
 ✡ 25 Tishrei 5787 · Parashat Bereshit  Chumash  Tehillim  Tanya  Rambam ×3  Rambam ×1  Daf Yomi  ·  📚 Ketubot 5  ×
 ```
 
-## Use
+One line above the prompt holds the day: click a section, or 📚 where you left the Library, and it opens in the sidebar. **×** hides it until tomorrow.
 
-| Command | What it does |
+In the sidebar, **📅 Today** is a menu of the day's sections; each opens into its full text, and **next ›** walks through the day in order:
+
+- **Chumash**, the day's aliyah, with Rashi under each verse
+- **Tehillim** on the Chabad monthly cycle
+- **Tanya**, the whole day's portion
+- **Rambam** ×1 and ×3, perek by perek, each halacha numbered **א. ב. ג.**
+- **Daf Yomi**, amud by amud, with Rashi on each passage
+- **Hayom Yom**, when Sefaria has it
+
+## Library
+
+**📚 Library** (`l`) is for learning through whole works:
+
+- **Mishnayos**: 63 masechtos, perek by perek
+- **Shas**: the Bavli daf by daf, with Rashi
+- **Mishneh Torah**: 14 sefarim, hilchos perek by perek
+
+Pick a collection, a seder or sefer, a masechta or hilchos, then a perek or daf. **Continue** picks up where you left each one, in any session; **next ›** runs straight on into the next masechta. Texts load from Sefaria only when you open them.
+
+<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
+
+## Hebrew that reads right
+
+- **Fonts**: Frank Ruhl (default) or Shlomo, bundled, with nikkud. Te'amim are left out.
+- **English**: off, under each paragraph, or side by side. Rashi's English too (Rosenbaum & Silbermann).
+- **Every surface**: the Desktop app draws each reading with the font built in; Ghostty gets every letter placed and its Hebrew mapped to the font; macOS Terminal is best effort (it reorders Hebrew itself).
+
+All of it is on the sidebar's **⚙ Settings** page (`s`), and in `/config` under dl.
+
+## Commands and keys
+
+| | |
 |---|---|
 | `/dl` | Open the sidebar |
-| `/dl-toggle` | Hide the line above the prompt for today, or bring it back (the × on the line hides it too) |
-| `/dl:text` | Print the text in the conversation (`--refs`, `--full`, `--after-sunset`, `--date 2026-10-05`, `--lang he\|en\|both`) |
-
-In the sidebar:
-
-| Key | |
-|---|---|
-| `t` | Today: the menu of the day's sections |
-| `l` | Library |
-| `s` | Settings |
-| `1`–`7` | Pick a section from today's menu (sections with no text that day are left out) |
-| `j` / `k` | Next / previous: perek (Rambam ×3), amud (Daf Yomi), or in the Library the next perek or daf |
-| `↑` `↓` | Scroll |
-| `Esc` | Back to the prompt |
-
-Inside a section of the day, a breadcrumb goes back to the menu and **‹ previous** / **next ›** step through the day's learning in order.
-
-### Settings
-
-The sidebar's **⚙ settings** page (`s`) sets these; they're also in `/config` under dl, and they last across sessions.
-
-| Setting | Choices |
-|---|---|
-| Hebrew font | **Frank Ruhl** (Frank Ruhl Libre, the default) or **Shlomo**, both bundled with nikkud; **System** leaves every font alone |
-| English | Off, Staggered, Side by side |
-| Nikkud | On, Off |
-| Rashi | On, Off |
-| Text size | Small, Medium, Large (the Desktop app; a terminal uses its own size) |
-
-The Hebrew font is embedded in the Desktop app's pages. For **Ghostty** it is installed for your user and Ghostty's Hebrew is mapped to it, with one marked line in your Ghostty config (reload it with cmd+shift+,); a Hebrew mapping you wrote yourself is left alone, and **System** removes the mod's line. **macOS Terminal** has no way to use a separate Hebrew font, so it keeps its own.
-
-## Terminals
-
-Terminals draw Hebrew in different ways, so the sidebar lays it out per terminal:
-
-| Where | How it reads |
-|---|---|
-| **Ghostty**, and other terminals without right-to-left support | Best. The mod places every letter itself. |
-| **Claude Desktop** (Code tab) | Best. With a Hebrew font chosen, each reading is drawn as one image with that font built in, laid out by the app's own text engine (you can't select text inside it); with System, as text. |
-| **macOS Terminal** | Best effort. Terminal reorders Hebrew on its own, and where Claude Code repaints part of the screen it can leave stray letters behind; nikkud on a line's first letter can break. Press `n` to drop nikkud, or use Ghostty. |
+| `/dl-toggle` | Hide or show the line above the prompt |
+| `/dl:text` | Print today's text in the chat, to ask Claude about it |
+| `t` `l` `s` | Today, Library, Settings |
+| `1`–`7` | A section from today's menu |
+| `j` `k` | Next, previous (perek, amud, daf) |
 
 ## Sources
 
-- Hebrew date: [hebcal.com](https://www.hebcal.com/home/developer-apis) converter API
-- Calendar and texts: [Sefaria API](https://developers.sefaria.org/) (`/api/calendars`, `/api/v3/texts`)
-- Tanya: Sefaria's calendar names only where each day's reading starts, so the mod reads up to where the next day's starts
-- Tehillim follows the Chabad monthly cycle, including 29-day months and the Psalm 119 split
-- Sections link to [chabad.org daily study](https://www.chabad.org/dailystudy) as a fallback
-
-`scripts/dl.py` caches API responses in `~/.cache/daily-learning/` (delete it any time); the mod keeps only today's text, in its own store.
+Texts and calendar from [Sefaria](https://developers.sefaria.org/), the Hebrew date from [hebcal](https://www.hebcal.com/home/developer-apis), with [chabad.org](https://www.chabad.org/dailystudy) as a fallback.
 
 ## Develop
 
-```
-.claude-plugin/        plugin.json (manifest, Hebrew font setting) and marketplace.json
-hooks/register.tsx     the mod: band, sidebar, commands, fetching
-hooks/data.ts          the day's data shaped for drawing (pure)
-hooks/library.ts       the Library: collections, Sefaria's structure, refs, next/previous across books (pure)
-hooks/hebrew.ts        Hebrew cleanup, mark order, wrapping and right-to-left ordering (pure)
-hooks/svg.ts           the Desktop app's page: one SVG with the font embedded (pure)
-hooks/font-metrics.ts  the font's letter widths, for wrapping (generated)
-types/index.d.ts       the sidebar's $.state contract
-commands/text.md       /dl:text
-scripts/dl.py          fetches the day's refs and text (stdlib only; also works standalone, --json)
-scripts/install-font.sh  applies the Hebrew font setting
-scripts/make-woff.py   builds the fonts' .woff files and hooks/font-metrics.ts from the .ttf files
-fonts/                 Shlomo and Frank Ruhl Libre (.ttf, and .woff for the Desktop app) and their licenses
-tests/                 claude plugin test suites, with one day's data as a fixture
-```
-
 ```sh
-claude --plugin-dir .          # run it; edits apply on /reload-plugins
-claude plugin validate .       # what the mod hooks and calls, and anything the engine would refuse
-claude plugin test .           # the test suites
-npx -p typescript tsc -p .     # type-check (after one --plugin-dir run writes .claude-plugin/types)
+claude --plugin-dir .      # run from a clone; edits apply on /reload-plugins
+claude plugin test .       # tests
+claude plugin validate .   # what the mod does, and anything the engine would refuse
 ```
 
-An installed copy (`/plugin install`) is a snapshot: bump `version` in `.claude-plugin/plugin.json` and run `claude plugin update dl@daily-learning` to refresh it.
+`hooks/register.tsx` is the mod (line, sidebar, fetching); `hooks/data.ts`, `library.ts`, `hebrew.ts` and `svg.ts` are pure helpers it draws with; `scripts/dl.py` fetches the day's text. An installed copy is a snapshot: bump `version` in `.claude-plugin/plugin.json`, then `claude plugin update dl@daily-learning`.
 
 ## License
 
-The code is MIT; see [LICENSE](LICENSE). The bundled fonts are under the SIL Open Font License 1.1: Shlomo © SIL International and Shlomo Orbach, Frank Ruhl Libre © The Frank Ruhl Libre Project Authors; see [fonts/](fonts/).
+Code: MIT ([LICENSE](LICENSE)). Fonts: SIL Open Font License 1.1, Shlomo © SIL International and Shlomo Orbach, Frank Ruhl Libre © The Frank Ruhl Libre Project Authors ([fonts/](fonts/)).
