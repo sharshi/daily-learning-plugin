@@ -1,4 +1,4 @@
-# Daily Learning
+# Daily Learning Plugin
 
 A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) (`dl`) for the daily learning: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam (1 and 3 perakim), Hayom Yom and Daf Yomi.
 
@@ -28,11 +28,11 @@ In a Claude Code session:<img width="1377" height="1027" alt="Screenshot 2026-10
 
 
 ```
-/plugin marketplace add sharshi/daily-learning
+/plugin marketplace add sharshi/daily-learning-plugin
 /plugin install dl@daily-learning
 ```
 
-Or try it for one session from a clone: `claude --plugin-dir ./daily-learning`.
+Or try it for one session from a clone: `claude --plugin-dir ./daily-learning-plugin`.
 
 ## Use
 

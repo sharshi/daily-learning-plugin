@@ -26,7 +26,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-UA = "daily-learning/1.0 (+https://github.com/sharshi/daily-learning)"
+UA = "daily-learning/1.0 (+https://github.com/sharshi/daily-learning-plugin)"
 CACHE_DIR = os.path.expanduser("~/.cache/daily-learning")
 TIMEOUT = 20
 

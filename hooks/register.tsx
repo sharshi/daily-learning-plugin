@@ -44,7 +44,7 @@ async function setHidden($: Host, key: string | null) {
 
 async function getJSON($: Host, url: string) {
   const res = await $.http.fetch(url, {
-    headers: { "User-Agent": "daily-learning (+https://github.com/sharshi/daily-learning)", Accept: "application/json" },
+    headers: { "User-Agent": "daily-learning (+https://github.com/sharshi/daily-learning-plugin)", Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return JSON.parse(res.text);
