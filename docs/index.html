@@ -87,6 +87,8 @@
   .band .sec { color: var(--text); }
   .band .muted { color: var(--muted); }
   .band .x { margin-left: auto; color: var(--muted); }
+  .band .wait { color: var(--accent); font-weight: 600; }
+  .wait-title { margin: 28px 0 0; }
 
   .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
@@ -156,11 +158,17 @@
   <div class="wrap">
     <h2>Today</h2>
     <p class="sub">One line above the prompt: the date, Today's learning, the Library, and ▶ where you left each collection. Each opens the sidebar there; × hides the line until tomorrow.</p>
-    <p class="sub">When Claude works on something long, the same line offers to fill the wait with your next bit of learning, and tells you when Claude is done.</p>
     <div class="band" role="img" aria-label="Example of the line above the prompt">
       <span class="date">✡ 25 Tishrei 5787 · Parashat Bereshit</span>
       <span class="sec">📅 Today's learning</span><span class="sec">📚 Library</span><span class="sec">▶ Ketubot 5</span>
       <span class="x">×</span>
+    </div>
+    <h3 class="wait-title">While Claude works</h3>
+    <p class="sub">On a longer-running task, the same line offers to fill the wait: pick up where you left the Library, or open the next part of today you haven't read. It never takes the keyboard, disappears when Claude is done, and shows at most every 30 minutes. Set it to 45 seconds, 2 minutes, or off in Settings.</p>
+    <div class="band" role="img" aria-label="Example of the line while Claude works: Claude's working. Learn while you wait, with Ketubot 5, Chumash and Rashi, and later">
+      <span class="wait">⏳ Claude's working. Learn while you wait:</span>
+      <span class="sec">▶ Ketubot 5</span><span class="sec">📅 Chumash + Rashi</span>
+      <span class="muted">later</span>
     </div>
     <div class="grid" style="margin-top:18px">
       <div class="card">
