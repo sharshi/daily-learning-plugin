@@ -1,6 +1,9 @@
 {
   "name": "chitas",
-  "version": "0.1.0",
-  "description": "Daily learning above the prompt: Chumash aliyah + Rashi, Tehillim, Tanya, Rambam, Hayom Yom, Daf Yomi. /chitas prints the full text.",
-  "author": { "name": "Shersheial" }
+  "version": "0.2.0",
+  "description": "Daily learning above the prompt (Chumash, Tehillim, Tanya, Rambam, Hayom Yom, Daf Yomi) and the full text in a sidebar with /chitas-pane. /chitas prints the text in the transcript.",
+  "author": {
+    "name": "Shersheial"
+  },
+  "types": "./types/index.d.ts"
 }

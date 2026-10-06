@@ -1,0 +1,11 @@
+{
+  "name": "chitas-cc-mod",
+  "owner": { "name": "Shersheial" },
+  "plugins": [
+    {
+      "name": "chitas",
+      "source": "./",
+      "description": "Daily Chitas, Rambam, Hayom Yom and Daf Yomi above the prompt; /chitas prints the full text."
+    }
+  ]
+}
