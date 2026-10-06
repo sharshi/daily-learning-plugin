@@ -10,7 +10,8 @@ A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) (`dl`
   - Rambam ×1 and Rambam ×3, one perek at a time, each halacha numbered **א. ב. ג.**
   - Daf Yomi, one amud at a time, each passage with its Rashi
   - Hayom Yom, when Sefaria has its text
-  - English is a toggle; nikkud is a toggle; te'amim are left out.
+  - English is a toggle, Rashi's included (Rosenbaum & Silbermann's translation; Sefaria has no English for Rashi on the Gemara); nikkud is a toggle; te'amim are left out.
+  - In the terminal, the date, tabs and toggles stay at the top as the text scrolls.
 - **`/dl:text`** prints the day's text into the conversation, where you can ask Claude about it.
 
 ```
@@ -51,7 +52,7 @@ In the sidebar:
 
 ### Setting: Hebrew font
 
-In `/config`, under dl, **Hebrew font** picks the font the sidebar's Hebrew is drawn in: **Shlomo** or **Frank Ruhl** (Frank Ruhl Libre), both bundled, both with nikkud. **System** (the default) leaves every font alone.
+In `/config`, under dl, **Hebrew font** picks the font the sidebar's Hebrew is drawn in: **Frank Ruhl** (Frank Ruhl Libre, the default) or **Shlomo**, both bundled, both with nikkud. **System** leaves every font alone.
 
 - **Desktop app:** the chosen font is embedded in the sidebar's pages.
 - **Ghostty:** the font is installed for your user and Ghostty's Hebrew is mapped to it, with one marked line in your Ghostty config (reload it with cmd+shift+,). A Hebrew mapping you wrote yourself is left alone. Choosing **System** removes the mod's line.

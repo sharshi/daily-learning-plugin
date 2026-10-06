@@ -19,7 +19,7 @@ const TEHILLIM: Record<number, string> = {
 const HEB_MONTH: Record<string, string> = { "Sh'vat": "Shevat", Iyyar: "Iyar", Tamuz: "Tammuz" };
 
 // Shape version of a cached Day: bump it when Day changes, and old caches refetch.
-export const DAY_V = 5;
+export const DAY_V = 6;
 
 // What the band shows: the Hebrew date and one [label, ref] row per section.
 export type Brief = {

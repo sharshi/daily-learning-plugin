@@ -369,27 +369,68 @@ export const register: Register = (on, options) => {
     const hebDate = d?.hebrew ? cleanHe(d.hebrew, nk) : "";
     // Missing text hides its tab, so its "... text: 404" line says nothing useful.
     const issues = (d?.errors ?? []).filter((x) => !/ text: /.test(x));
-    return (
-      <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between">
-          <Text color="cyan" bold>✡ {d?.title ?? "Daily Learning"}</Text>
-          {hebDate ? <Text color="cyan">{order(hebDate.split(" "))}</Text> : null}
-        </Box>
-        <Box flexDirection="row" flexWrap="wrap">
-          {shownTabs(d).map(([id, label], i) => (
+    // The header: date, tabs, toggles. Rows are packed here (a Button draws as
+    // "[ label ]", a plain one as "k: label") so the header's height is known.
+    const pack = <T,>(items: T[], w: (x: T) => number) => {
+      const rows: T[][] = [];
+      let row: T[] = [], n = 0;
+      for (const x of items) {
+        if (row.length && n + w(x) > width + 1) { rows.push(row); row = []; n = 0; }
+        row.push(x); n += w(x);
+      }
+      if (row.length) rows.push(row);
+      return rows;
+    };
+    const tabRows = pack(shownTabs(d).map((x, i) => [...x, i] as const), ([, label]) => label.length + 4);
+    const toggles = [
+      <Button key="english" plain hotkey="e" label={`English: ${showEn ? "on" : "off"}`} onPress={() => update($, english, (v) => !v)} />,
+      <Button key="nikkud" plain hotkey="n" label={`nikkud: ${nk ? "on" : "off"}`} onPress={() => update($, nikkud, (v) => !v)} />,
+    ];
+    const toggleRows = pack(toggles.map((b, i) => [b, i === 0 ? 17 + 2 : 14 + 2] as const), ([, w]) => w);
+    const header = [
+      <Box key="date" flexDirection="row" justifyContent="space-between">
+        <Text color="cyan" bold wrap="truncate">✡ {d?.title ?? "Daily Learning"}</Text>
+        {hebDate ? <Text color="cyan" wrap="truncate">{order(hebDate.split(" "))}</Text> : null}
+      </Box>,
+      ...tabRows.map((row, r) => (
+        <Box key={`tabs${r}`} flexDirection="row">
+          {row.map(([id, label, i]) => (
             <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)}
               variant={id === t ? "primary" : "secondary"} dimColor={id !== t}
               onPress={() => update($, tab, () => id)} />
           ))}
         </Box>
-        <Box flexDirection="row" flexWrap="wrap">
-          <Button key="english" plain hotkey="e" label={`English: ${showEn ? "on" : "off"}`}
-            onPress={() => update($, english, (v) => !v)} />
-          <Text> </Text>
-          <Button key="nikkud" plain hotkey="n" label={`nikkud: ${nk ? "on" : "off"}`}
-            onPress={() => update($, nikkud, (v) => !v)} />
+      )),
+      ...toggleRows.map((row, r) => (
+        <Box key={`toggles${r}`} flexDirection="row" gap={2}>{row.map(([b]) => b)}</Box>
+      )),
+      e.surface === "terminal" ? <Text key="rule" dimColor>{"─".repeat(width)}</Text> : <Text key="rule"> </Text>,
+    ];
+
+    // In the terminal the header stays put: it is drawn over the body at the
+    // window's current top (the pane redraws as it scrolls), on a layer of
+    // spaces that blanks the text scrolling beneath it, and a spacer of the
+    // same height keeps the body's first rows clear of it.
+    if (e.surface === "terminal") {
+      const top = e.props.scroll?.offset ?? 0;
+      const tall = header.length; // not `h`: that name is JSX's element factory
+      return (
+        <Box flexDirection="column">
+          {Array.from({ length: tall }, (_, i) => <Text key={`gap${i}`}> </Text>)}
+          {body()}
+          {issues.length ? <Text dimColor>Issues: {issues.join("; ")}</Text> : null}
+          <Box key="blank" position="absolute" top={top} left={0} flexDirection="column">
+            {Array.from({ length: tall }, (_, i) => <Text key={`blank${i}`}>{" ".repeat(width + 1)}</Text>)}
+          </Box>
+          <Box key="header" position="absolute" top={top} left={0} flexDirection="column" width={width + 1}>
+            {header}
+          </Box>
         </Box>
-        {e.surface === "terminal" ? <Text dimColor>{"─".repeat(width)}</Text> : <Text> </Text>}
+      );
+    }
+    return (
+      <Box flexDirection="column">
+        {header}
         {body()}
         {issues.length ? <Text dimColor>Issues: {issues.join("; ")}</Text> : null}
       </Box>

@@ -131,10 +131,15 @@ def tanya_portion(ref, g, use_cache):
     return f"{book} {chap}:{start}-{end}" if end > start else ref
 
 
-def sefaria_text(ref, lang, use_cache, chapters=False):
+# Sefaria's default English for Rashi on the Torah covers few comments; this
+# translation covers them all.
+RASHI_EN = "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934"
+
+
+def sefaria_text(ref, lang, use_cache, chapters=False, en_version=None):
     q = urllib.parse.quote(ref)
-    versions = {"he": "version=hebrew", "en": "version=english",
-                "both": "version=hebrew&version=english"}[lang]
+    en = "version=" + urllib.parse.quote("english|" + en_version) if en_version else "version=english"
+    versions = {"he": "version=hebrew", "en": en, "both": "version=hebrew&" + en}[lang]
     url = f"https://www.sefaria.org/api/v3/texts/{q}?{versions}&return_format=text_only"
     d = get_json(url, use_cache)
     out = {"ref": d.get("ref", ref), "he": [], "en": []}
@@ -270,7 +275,7 @@ def build(g, args):
                 errors.append(f"chumash text: {err}")
             sec["text"] = txt
             if not args.no_rashi:
-                rashi, err = safe(sefaria_text, f"Rashi on {ref}", args.lang, use_cache)
+                rashi, err = safe(sefaria_text, f"Rashi on {ref}", args.lang, use_cache, en_version=RASHI_EN)
                 if err:
                     errors.append(f"rashi text: {err}")
                 sec["rashi"] = rashi

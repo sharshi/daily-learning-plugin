@@ -90,6 +90,10 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   await ui.press({ key: "english" } as never);
   t = await texts();
   expect(t.some((x) => x.includes("deep sleep"))).toBe(true);
+  // Rashi's English (Rosenbaum & Silbermann) follows his Hebrew on 2:21.
+  const ribs = t.findIndex((x) => x.includes("OF HIS RIBS"));
+  expect(ribs).toBeGreaterThan(r21);
+  expect(ribs).toBeLessThan(t.findIndex((x) => bare(x).startsWith("ויבן")));
 });
 
 test("Rambam ×3 has its text", { timeoutMs: 20000 }, async ($, on) => {
@@ -325,4 +329,18 @@ test("Desktop: the body is one SVG with the chosen font embedded, Hebrew in read
   expect(src.replace(/[\u0591-\u05C7]/g, "")).toContain("\u05D4\u05D7\u05D5\u05E4\u05E8 \u05D1\u05D5\u05E8"); // החופר בור, as written
   // Tabs and perek buttons stay outside the picture.
   expect(await ui.find({ key: "next-end" })).toBeDefined();
+});
+
+test("terminal: the header stays at the top of the window as the sidebar scrolls", { timeoutMs: 20000 }, async ($, on) => {
+  host(on);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const scrolled = { ...PROPS, scroll: { offset: 12, bodyRows: 40 } };
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: scrolled as never });
+  const header = await ui.find({ key: "header" });
+  expect(header?.props.position).toBe("absolute");
+  expect(header?.props.top).toBe(12);
+  expect((await ui.find({ key: "blank" }))?.props.top).toBe(12);
+  await ui.press({ key: "tab-tanya" } as never);
+  expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei");
 });

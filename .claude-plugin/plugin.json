@@ -1,7 +1,7 @@
 {
   "name": "dl",
   "displayName": "Daily Learning",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi) on one line above the prompt, and the full Hebrew text in a sidebar.",
   "author": {
     "name": "Shersheial",
@@ -27,13 +27,13 @@
     "hebrew_font": {
       "type": "string",
       "title": "Hebrew font",
-      "description": "The font the sidebar's Hebrew is drawn in: Shlomo or Frank Ruhl (both bundled, with nikkud). The Desktop app draws with it directly; for Ghostty it's installed for your user and Ghostty's Hebrew is mapped to it. System leaves every font alone.",
+      "description": "The font the sidebar's Hebrew is drawn in: Frank Ruhl (the default) or Shlomo, both bundled, with nikkud. The Desktop app draws with it directly; for Ghostty it's installed for your user and Ghostty's Hebrew is mapped to it. System leaves every font alone.",
       "options": [
-        "Shlomo",
         "Frank Ruhl",
+        "Shlomo",
         "System"
       ],
-      "default": "System"
+      "default": "Frank Ruhl"
     }
   }
 }

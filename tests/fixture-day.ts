@@ -192,7 +192,57 @@ export default {
           "כתנות עור. יֵשׁ דִּבְרֵי אַגָּדָה אוֹמְרִים חֲלָקִים כְּצִּפֹּרֶן הָיוּ מְדֻבָּקִים עַל עוֹרָן וְיֵ\"אֹ דָּבָר הַבָּא מִן הָעוֹר, כְּגוֹן צֶמֶר הָאַרְנָבִים שֶׁהוּא רַךְ וְחָם וְעָשָׂה לָהֶם כֻּתֳּנוֹת מִמֶּנּוּ:"
         ],
         "en": [
-          "ואל אישך תשוקתך AND TO YOUR HUSBAND WILL BE YOUR DESIRE — for sexual relations. And, nonetheless, you will not have the temerity to proposition him with [your] mouth, but rather HE WILL RULE OVER YOU — everything will come from him and not from you."
+          "ולאדם לא מצא עזר… ויפל ה' אלהים תרדמה FOR THE MAN HE HAD NOT FOUND A HELP MEET FOR HIM … AND THE ETERNAL GOD CAUSED AN OVERPOWERING SLEEP TO FALL — When He brought them, He brought them before him male and female of each and every kind. Thereupon he said: all these have a mate, but I have no mate! Immediately He caused to fall [an overpowering sleep upon him] (Genesis Rabbah 17:4).",
+          "מצלעותיו OF HIS RIBS — The word means of his sides, similar to (Exodus 26:20) ולצלע המשכן “and for the second side of the tabernacle”; this has a bearing upon what they (the Sages) say, (Eruvin 18a): They were created with two faces (sides).",
+          "ויסגור AND HE CLOSED UP the place where it was cut (Berakhot 61b).",
+          "ויישן ויקח AND HE SLEPT AND then HE TOOK in order that he should not see the piece of flesh out of which she was created, for she might be despised by him (Sanhedrin 39a).",
+          "ויבן AND HE FORMED (literally, He built) — as a structure, wide below and narrower above for bearing the child, just as a wheat-store is wide below and narrower above so that its weight should not strain the walls (Berakhot 61a).",
+          "ויבן את הצלע לאשה AND HE MADE THE RIB INTO A WOMAN — לאשה means that is should become a woman, like (Judges 8:21) “and Gideon made it לאפוד ” i. e., that it should become an ephod.",
+          "זאת הפעם THIS NOW — This teaches that Adam endeavoured to find a companion among all cattle and beasts, but found no satisfaction except in Eve (Yevamot 63a).",
+          "לזאת יקרא אשה כי מאיש וגו THIS SHALL BE CALLED WOMAN, BECAUSE THIS WAS TAKEN OUT OF MAN — Here we have a kind of play upon words (the words אשה and איש sounding similar): hence we may learn that the language used at the time of the Creation was the Holy Tongue (Hebrew) (Genesis Rabbah 18:4).",
+          "על כן יעזב איש THEREFORE A MAN LEAVETH — The Divine Spirit says this, thus prohibiting immoral relationship to the “Sons of Noah” also (Sanhedrin 57b).",
+          "לבשר אחד ONE FLESH — Both parents are united in the child.",
+          "ולא יתבוששו AND THEY WERE NOT ASHAMED — for they did not know what modestly meant, so as to distinguish between good and evil. Although he (Adam) had been endowed with knowledge to give names to all creatures, yet the evil inclination did not become an active principle in him until he had eaten of the tree, when it entered into him and he became aware of the difference between good and evil.",
+          "והנחש היה ערום AND THE SERPENT WAS MORE SUBTLE — What connection is there between the following narrative and the statement just made? The latter should have been followed by: “and He [the Lord God] made for Adam and his wife garments of skin and clothed them” (3:21), but Scripture informs you with what plan the serpent assailed them: he saw them naked and unashamed and he coveted her (Eve) (Genesis Rabbah 18:6).",
+          "ערום מכל MORE SUBTLE THAN ALL — Corresponding with his subtleness and his greatness was his downfall; “more subtle than all” — “more cursed than all” (see 3:14). (Genesis Rabbah 19:1).",
+          "‘אף כי אמר וגו ALTHOUGH GOD HATH SAID — The meaning is, “Perhaps He has said unto you” ‘לא תאכלו מכל וגו YE SHALL NOT EAT OF EVERY TREE OF THE GARDEN — And although he saw them eating of the other fruits yet he entered into a long conversation with her so that she should answer him, and so that he might then have an opportunity to talk about that particular tree.",
+          "ולא תגעו בו NEITHER SHALL YE TOUCH IT — She added to God’s command (which did not forbid touching the tree, but only eating of its fruit) therefore she was led to diminish from it. It is to this that the text refers (Proverbs 30:6): “Add thou not unto His words” (Genesis Rabbah 19:3).",
+          "לא מות תמתון YE SHALL NOT SURELY DIE — He pushed her until she touched it. He then said to her, “Just as there is no death in touching it, so there is no death in eating it” (Genesis Rabbah 19:3).",
+          "כי ידע FOR [GOD] KNOWS — Every artisan detests his fellow-artisans (“Two of a trade never agree”). The serpent suggested to her: God ate of the tree and created the world (Genesis Rabbah 19:4) so if you eat ...",
+          "והייתם כאלהים YE WILL BE AS GOD — Creators of worlds.",
+          "ותרא האשה AND THE WOMAN SAW — She approved the words of the serpent — they pleased her and she believed him (Genesis Rabbah 19:3).",
+          "כי טוב העץ THAT THE TREE WAS GOOD to make her become like God.",
+          "וכי תאוה היא לעינים AND THAT IT WAS A DELIGHT TO THE EYES — even as he had said to her: “then your eyes shall be opened”.",
+          "ונחמד להשכיל AND IT WAS TO BE DESIRED TO MAKE ONE WISE — even as he had said to her: “knowing good and evil”.",
+          "ותתן גם לאשה AND SHE GAVE ALSO TO HER HUSBAND so that she should not die and he remain alive to take another wife (Genesis Rabbah 19:5).",
+          "The word גם, also, may be understood to include cattle and beasts (that is, that she gave to these and also to her husband) (Genesis Rabbah 19:5).",
+          "‘ותפקחנה וגו [AND THE EYES OF BOTH OF THEM] WERE UNCLOSED — Scripture speaks here with reference to intelligence (the mind’s eye) and not with reference to actual seeing; the end of the verse proves this for it states,",
+          "וידעו כי ערומים הם AND THEY KNEW THAT THEY WERE NAKED — Even a blind person knows when he is naked! What then does “and they knew that they were naked” signify? One charge had been entrusted to them and they now knew they had stripped themselves of it (Genesis Rabbah 19:6).",
+          "עלה תאנה FIG LEAVES — This was the tree of which they had eaten; by the very thing through which their ruin had been caused was some improvement effected in their condition (Sanhedrin 70b). The other trees however prevented them from taking of their leaves. And why is not the name of the tree clearly mentioned? Because the Holy One, blessed be He, never wishes to grieve anything He has created: hence its name is not mentioned in order that it might not be put to shame by people saying, “This is the tree through which the world suffered” (Midrash R. Tanchuma 1:4:14).",
+          "וישמעו AND THEY HEARD — There are many Midrashic explanations and our Teachers have already collected them in their appropriate places in Genesis Rabbah and in other Midrashim. I, however, am only concerned with the plain sense of Scripture and with such Agadoth that explain the words of Scripture in a manner that fits in with them. וישמעו AND THEY HEARD — What did they hear? They heard the sound of the Holy One, blessed be He, as He walked in the garden (see Genesis Rabbah 19:12).",
+          "לרוח היום IN THE WIND OF THE DAY — (רוח is used also in the meaning of direction,— north, east, — etc.) in that direction to which the sun travels (באה לשם) which is the west, for towards evening the sun is in the west, and they committed the sin in the tenth hour (Sanhedrin 38b).",
+          "איכה WHERE ART THOU — He knew where he was, but He asked this in order to open up a conversation with him that he should not become confused in his reply, if He were to pronounce punishment against him all of a sudden. Similarly in the case of Cain, He said to him, (4:9) “where is Abel thy brother?” Similarly with Balaam, (Numbers 22:9) “what men are these with thee?” — to open up a conversation with them; so, also, in the case of Hezekiah with reference to the messengers of Merodach-baladan (Isaiah 39:3).",
+          "מי הגיד לך WHO TOLD THEE? — Whence has the knowledge come to you what shame there is in standing naked?",
+          "המן העץ HAST THOU EATEN OF THE TREE — The ' ה of the word המן expresses a question.",
+          "אשר נתת עמדי WHOM THOU GAVEST TO BE WITH ME — Here he showed his ingratitude (Avodah Zarah 5b).",
+          "השיאני means HE DECEIVED ME; — we find the word in the same meaning in (2 Chronicles 32:15), “Now therefore let not Hezekiah beguile you” (Genesis Rabbah 19).",
+          "כי עשית זאת BECAUSE THOU HAST DONE THIS — From here we infer that we should not occupy ourselves with what may be in favour of one who seduces people to idolatry, for had He asked it, “Why hast thou done this?”, it could have answered Him, “When the words of the teacher and those of the pupil are contradictory, whose orders should be obeyed?” (Sanhedrin 29a). (i. e. if You told them one thing and I another, should they not have obeyed You?).",
+          "מכל הבהמה ומכל חית השדה FROM AMONG (or, MORE THAN) ALL CATTLE AND ALL THE BEASTS OF THE FIELD — If it was cursed more than the cattle whose period of gestation is longer than that of beasts does it not necessarily follow that it was cursed more than the beasts? Our Rabbis have definitely established the correctness of the following deduction in treatise Bekhorot 8a, that it (viz., the use of these apparently superfluous words “and more than all the beasts of the field”) teaches that the period of gestation of the serpent is seven years.",
+          "על גחנך תלך UPON THY BELLY SHALT THOU GO — It had feet but they were cut off (Genesis Rabbah 20:5).",
+          "ואיבה אשית AND I WILL SET ENMITY — Your sole intention was that Adam should die by eating it first and that you should then take Eve for yourself (Genesis Rabbah 20:5), and you came to speak to Eve first only because women are easily influenced and know how to influence their husbands; therefore “I shall put enmity [between thee and the woman]”.",
+          "הוא ישופך HE WILL BRUISE (or, POUND) THEE— Like (Deuteronomy 9:21), “And I beat in pieces” which Onkelos translates by ושפית “I pounded it.”",
+          "ואתה תשופנו עקב AND THOU SHALT BRUISE HIS HEEL — As you will have no height (not stand erect) you will be able to bite him only on the heel, but even at that spot you will kill him. The word תשופנו is of the same import as the verb in (Isaiah 40:24). נשף בהם “It bloweth upon them.” When a serpent comes to bite, it blows with a kind of hissing sound. Although the words ישופך and תשופנו have different meanings, since they constitute “a play upon words” by sounding similar, they are both used here.",
+          "עצבנך THY PAIN — viz., the trouble of rearing children (Eruvin 100b).",
+          "והרונך AND THY CONCEPTION— viz., the pain of pregnancy.",
+          "בעצב תלדי בנים IN PAIN THOU SHALT BEAR CHILDREN — This refers to the pangs of childbirth (Eruvin 100b).",
+          "תשוקתך THY DESIRE — Similar to (Isaiah 29:8), ונפשו שוקקה “and his soul hath appetite”, (desires).",
+          "ארורה האדמה בעבורך CURSED BE THE GROUND FOR THY SAKE — It will produce to you cursed objects such as flies, fleas and ants; it may be compared to the case of one who gets into depraved ways, and people curse the breasts at which he was suckled (Genesis Rabbah 5:9).",
+          "וקוץ ודרדר תצמיח לך THORNS ALSO AND THISTLES SHALL IT BRING FORTH TO THEE— תצמיח has for subject the earth; when you sow it with various kinds of grain, it shall bring forth thorns and thistles — artichokes and cardoon — which are fit for food only after special preparation (Genesis Rabbah 20:10).",
+          "ואכלת את עשב השדה AND THOU SHALT EAT THE HERB OF THE FIELD — What curse is involved here? Was he not told as a blessing, (1:29) “Behold I have given unto you every herb yielding seed”? But what is stated here at the beginning of this passage? “Cursed be the ground etc.… in toil shalt thou eat of it.” And after all your toil “thorns and thistles shall it bring forth to thee”. This means when you sow it with cereals and vegetables it shall bring forth for you thorns and thistles and other weeds, and you will perforce have to eat them for lack of other food (Pirkei DeRabbi Eliezer 14).",
+          "בזעת אפיך IN THE SWEAT OF THY FACE — after you have taken all this great trouble.",
+          "ויקרא האדם AND THE MAN CALLED — Scripture now reverts to its previous topic (Genesis 2:20) beginning with “and the man gave names”. It broke it off (that is, interpolated the story of the serpent) only to tell you that through the giving of names Eve became his mate, as it is written (Genesis 2:20) “but for Adam there was not found a help meet for him,” and that therefore “the [Lord God] caused to fall a deep sleep upon him” and formed Eve. But because Scripture writes at the end of the story of creation of Eve (Genesis 2:25), “and they were both naked”, it therefore follows on with the passage dealing with the serpent, to inform you that because he saw her nakedness and that they displayed no feeling of shame in their actions, he desired her, and he came upon them with his evil plan and with deceit.",
+          "חוה EVE — חוה has the same sound as חיה (and similar meaning “life”) — she was so called because she gives life (birth) to her children; the interchange of ‘י and ‘ו is similar to that in (Ecclesiastes 2:22), מה הוה לאדם “for what hath a man”, where הוה is used in the sense of היה “to be.”",
+          "כתנות עור GARMENTS FOR THE SKIN — There are Agadoth which say that they were smooth as fingernails, cleaving to their skin; whereas some say that they were made of material that comes from skin, as for example, the hair of hares which is soft and warm, and of this He made garments for them (Genesis Rabbah 20:12)."
         ],
         "he_verses": [
           [
@@ -301,23 +351,108 @@ export default {
           ]
         ],
         "en_verses": [
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
-          [],
+          [
+            "ולאדם לא מצא עזר… ויפל ה' אלהים תרדמה FOR THE MAN HE HAD NOT FOUND A HELP MEET FOR HIM … AND THE ETERNAL GOD CAUSED AN OVERPOWERING SLEEP TO FALL — When He brought them, He brought them before him male and female of each and every kind. Thereupon he said: all these have a mate, but I have no mate! Immediately He caused to fall [an overpowering sleep upon him] (Genesis Rabbah 17:4)."
+          ],
+          [
+            "מצלעותיו OF HIS RIBS — The word means of his sides, similar to (Exodus 26:20) ולצלע המשכן “and for the second side of the tabernacle”; this has a bearing upon what they (the Sages) say, (Eruvin 18a): They were created with two faces (sides).",
+            "ויסגור AND HE CLOSED UP the place where it was cut (Berakhot 61b).",
+            "ויישן ויקח AND HE SLEPT AND then HE TOOK in order that he should not see the piece of flesh out of which she was created, for she might be despised by him (Sanhedrin 39a)."
+          ],
+          [
+            "ויבן AND HE FORMED (literally, He built) — as a structure, wide below and narrower above for bearing the child, just as a wheat-store is wide below and narrower above so that its weight should not strain the walls (Berakhot 61a).",
+            "ויבן את הצלע לאשה AND HE MADE THE RIB INTO A WOMAN — לאשה means that is should become a woman, like (Judges 8:21) “and Gideon made it לאפוד ” i. e., that it should become an ephod."
+          ],
+          [
+            "זאת הפעם THIS NOW — This teaches that Adam endeavoured to find a companion among all cattle and beasts, but found no satisfaction except in Eve (Yevamot 63a).",
+            "לזאת יקרא אשה כי מאיש וגו THIS SHALL BE CALLED WOMAN, BECAUSE THIS WAS TAKEN OUT OF MAN — Here we have a kind of play upon words (the words אשה and איש sounding similar): hence we may learn that the language used at the time of the Creation was the Holy Tongue (Hebrew) (Genesis Rabbah 18:4)."
+          ],
+          [
+            "על כן יעזב איש THEREFORE A MAN LEAVETH — The Divine Spirit says this, thus prohibiting immoral relationship to the “Sons of Noah” also (Sanhedrin 57b).",
+            "לבשר אחד ONE FLESH — Both parents are united in the child."
+          ],
+          [
+            "ולא יתבוששו AND THEY WERE NOT ASHAMED — for they did not know what modestly meant, so as to distinguish between good and evil. Although he (Adam) had been endowed with knowledge to give names to all creatures, yet the evil inclination did not become an active principle in him until he had eaten of the tree, when it entered into him and he became aware of the difference between good and evil."
+          ],
+          [
+            "והנחש היה ערום AND THE SERPENT WAS MORE SUBTLE — What connection is there between the following narrative and the statement just made? The latter should have been followed by: “and He [the Lord God] made for Adam and his wife garments of skin and clothed them” (3:21), but Scripture informs you with what plan the serpent assailed them: he saw them naked and unashamed and he coveted her (Eve) (Genesis Rabbah 18:6).",
+            "ערום מכל MORE SUBTLE THAN ALL — Corresponding with his subtleness and his greatness was his downfall; “more subtle than all” — “more cursed than all” (see 3:14). (Genesis Rabbah 19:1).",
+            "‘אף כי אמר וגו ALTHOUGH GOD HATH SAID — The meaning is, “Perhaps He has said unto you” ‘לא תאכלו מכל וגו YE SHALL NOT EAT OF EVERY TREE OF THE GARDEN — And although he saw them eating of the other fruits yet he entered into a long conversation with her so that she should answer him, and so that he might then have an opportunity to talk about that particular tree."
+          ],
           [],
           [
-            "ואל אישך תשוקתך AND TO YOUR HUSBAND WILL BE YOUR DESIRE — for sexual relations. And, nonetheless, you will not have the temerity to proposition him with [your] mouth, but rather HE WILL RULE OVER YOU — everything will come from him and not from you."
+            "ולא תגעו בו NEITHER SHALL YE TOUCH IT — She added to God’s command (which did not forbid touching the tree, but only eating of its fruit) therefore she was led to diminish from it. It is to this that the text refers (Proverbs 30:6): “Add thou not unto His words” (Genesis Rabbah 19:3)."
+          ],
+          [
+            "לא מות תמתון YE SHALL NOT SURELY DIE — He pushed her until she touched it. He then said to her, “Just as there is no death in touching it, so there is no death in eating it” (Genesis Rabbah 19:3)."
+          ],
+          [
+            "כי ידע FOR [GOD] KNOWS — Every artisan detests his fellow-artisans (“Two of a trade never agree”). The serpent suggested to her: God ate of the tree and created the world (Genesis Rabbah 19:4) so if you eat ...",
+            "והייתם כאלהים YE WILL BE AS GOD — Creators of worlds."
+          ],
+          [
+            "ותרא האשה AND THE WOMAN SAW — She approved the words of the serpent — they pleased her and she believed him (Genesis Rabbah 19:3).",
+            "כי טוב העץ THAT THE TREE WAS GOOD to make her become like God.",
+            "וכי תאוה היא לעינים AND THAT IT WAS A DELIGHT TO THE EYES — even as he had said to her: “then your eyes shall be opened”.",
+            "ונחמד להשכיל AND IT WAS TO BE DESIRED TO MAKE ONE WISE — even as he had said to her: “knowing good and evil”.",
+            "ותתן גם לאשה AND SHE GAVE ALSO TO HER HUSBAND so that she should not die and he remain alive to take another wife (Genesis Rabbah 19:5).",
+            "The word גם, also, may be understood to include cattle and beasts (that is, that she gave to these and also to her husband) (Genesis Rabbah 19:5)."
+          ],
+          [
+            "‘ותפקחנה וגו [AND THE EYES OF BOTH OF THEM] WERE UNCLOSED — Scripture speaks here with reference to intelligence (the mind’s eye) and not with reference to actual seeing; the end of the verse proves this for it states,",
+            "וידעו כי ערומים הם AND THEY KNEW THAT THEY WERE NAKED — Even a blind person knows when he is naked! What then does “and they knew that they were naked” signify? One charge had been entrusted to them and they now knew they had stripped themselves of it (Genesis Rabbah 19:6).",
+            "עלה תאנה FIG LEAVES — This was the tree of which they had eaten; by the very thing through which their ruin had been caused was some improvement effected in their condition (Sanhedrin 70b). The other trees however prevented them from taking of their leaves. And why is not the name of the tree clearly mentioned? Because the Holy One, blessed be He, never wishes to grieve anything He has created: hence its name is not mentioned in order that it might not be put to shame by people saying, “This is the tree through which the world suffered” (Midrash R. Tanchuma 1:4:14)."
+          ],
+          [
+            "וישמעו AND THEY HEARD — There are many Midrashic explanations and our Teachers have already collected them in their appropriate places in Genesis Rabbah and in other Midrashim. I, however, am only concerned with the plain sense of Scripture and with such Agadoth that explain the words of Scripture in a manner that fits in with them. וישמעו AND THEY HEARD — What did they hear? They heard the sound of the Holy One, blessed be He, as He walked in the garden (see Genesis Rabbah 19:12).",
+            "לרוח היום IN THE WIND OF THE DAY — (רוח is used also in the meaning of direction,— north, east, — etc.) in that direction to which the sun travels (באה לשם) which is the west, for towards evening the sun is in the west, and they committed the sin in the tenth hour (Sanhedrin 38b)."
+          ],
+          [
+            "איכה WHERE ART THOU — He knew where he was, but He asked this in order to open up a conversation with him that he should not become confused in his reply, if He were to pronounce punishment against him all of a sudden. Similarly in the case of Cain, He said to him, (4:9) “where is Abel thy brother?” Similarly with Balaam, (Numbers 22:9) “what men are these with thee?” — to open up a conversation with them; so, also, in the case of Hezekiah with reference to the messengers of Merodach-baladan (Isaiah 39:3)."
+          ],
+          [],
+          [
+            "מי הגיד לך WHO TOLD THEE? — Whence has the knowledge come to you what shame there is in standing naked?",
+            "המן העץ HAST THOU EATEN OF THE TREE — The ' ה of the word המן expresses a question."
+          ],
+          [
+            "אשר נתת עמדי WHOM THOU GAVEST TO BE WITH ME — Here he showed his ingratitude (Avodah Zarah 5b)."
+          ],
+          [
+            "השיאני means HE DECEIVED ME; — we find the word in the same meaning in (2 Chronicles 32:15), “Now therefore let not Hezekiah beguile you” (Genesis Rabbah 19)."
+          ],
+          [
+            "כי עשית זאת BECAUSE THOU HAST DONE THIS — From here we infer that we should not occupy ourselves with what may be in favour of one who seduces people to idolatry, for had He asked it, “Why hast thou done this?”, it could have answered Him, “When the words of the teacher and those of the pupil are contradictory, whose orders should be obeyed?” (Sanhedrin 29a). (i. e. if You told them one thing and I another, should they not have obeyed You?).",
+            "מכל הבהמה ומכל חית השדה FROM AMONG (or, MORE THAN) ALL CATTLE AND ALL THE BEASTS OF THE FIELD — If it was cursed more than the cattle whose period of gestation is longer than that of beasts does it not necessarily follow that it was cursed more than the beasts? Our Rabbis have definitely established the correctness of the following deduction in treatise Bekhorot 8a, that it (viz., the use of these apparently superfluous words “and more than all the beasts of the field”) teaches that the period of gestation of the serpent is seven years.",
+            "על גחנך תלך UPON THY BELLY SHALT THOU GO — It had feet but they were cut off (Genesis Rabbah 20:5)."
+          ],
+          [
+            "ואיבה אשית AND I WILL SET ENMITY — Your sole intention was that Adam should die by eating it first and that you should then take Eve for yourself (Genesis Rabbah 20:5), and you came to speak to Eve first only because women are easily influenced and know how to influence their husbands; therefore “I shall put enmity [between thee and the woman]”.",
+            "הוא ישופך HE WILL BRUISE (or, POUND) THEE— Like (Deuteronomy 9:21), “And I beat in pieces” which Onkelos translates by ושפית “I pounded it.”",
+            "ואתה תשופנו עקב AND THOU SHALT BRUISE HIS HEEL — As you will have no height (not stand erect) you will be able to bite him only on the heel, but even at that spot you will kill him. The word תשופנו is of the same import as the verb in (Isaiah 40:24). נשף בהם “It bloweth upon them.” When a serpent comes to bite, it blows with a kind of hissing sound. Although the words ישופך and תשופנו have different meanings, since they constitute “a play upon words” by sounding similar, they are both used here."
+          ],
+          [
+            "עצבנך THY PAIN — viz., the trouble of rearing children (Eruvin 100b).",
+            "והרונך AND THY CONCEPTION— viz., the pain of pregnancy.",
+            "בעצב תלדי בנים IN PAIN THOU SHALT BEAR CHILDREN — This refers to the pangs of childbirth (Eruvin 100b).",
+            "תשוקתך THY DESIRE — Similar to (Isaiah 29:8), ונפשו שוקקה “and his soul hath appetite”, (desires)."
+          ],
+          [
+            "ארורה האדמה בעבורך CURSED BE THE GROUND FOR THY SAKE — It will produce to you cursed objects such as flies, fleas and ants; it may be compared to the case of one who gets into depraved ways, and people curse the breasts at which he was suckled (Genesis Rabbah 5:9)."
+          ],
+          [
+            "וקוץ ודרדר תצמיח לך THORNS ALSO AND THISTLES SHALL IT BRING FORTH TO THEE— תצמיח has for subject the earth; when you sow it with various kinds of grain, it shall bring forth thorns and thistles — artichokes and cardoon — which are fit for food only after special preparation (Genesis Rabbah 20:10).",
+            "ואכלת את עשב השדה AND THOU SHALT EAT THE HERB OF THE FIELD — What curse is involved here? Was he not told as a blessing, (1:29) “Behold I have given unto you every herb yielding seed”? But what is stated here at the beginning of this passage? “Cursed be the ground etc.… in toil shalt thou eat of it.” And after all your toil “thorns and thistles shall it bring forth to thee”. This means when you sow it with cereals and vegetables it shall bring forth for you thorns and thistles and other weeds, and you will perforce have to eat them for lack of other food (Pirkei DeRabbi Eliezer 14)."
+          ],
+          [
+            "בזעת אפיך IN THE SWEAT OF THY FACE — after you have taken all this great trouble."
+          ],
+          [
+            "ויקרא האדם AND THE MAN CALLED — Scripture now reverts to its previous topic (Genesis 2:20) beginning with “and the man gave names”. It broke it off (that is, interpolated the story of the serpent) only to tell you that through the giving of names Eve became his mate, as it is written (Genesis 2:20) “but for Adam there was not found a help meet for him,” and that therefore “the [Lord God] caused to fall a deep sleep upon him” and formed Eve. But because Scripture writes at the end of the story of creation of Eve (Genesis 2:25), “and they were both naked”, it therefore follows on with the passage dealing with the serpent, to inform you that because he saw her nakedness and that they displayed no feeling of shame in their actions, he desired her, and he came upon them with his evil plan and with deceit.",
+            "חוה EVE — חוה has the same sound as חיה (and similar meaning “life”) — she was so called because she gives life (birth) to her children; the interchange of ‘י and ‘ו is similar to that in (Ecclesiastes 2:22), מה הוה לאדם “for what hath a man”, where הוה is used in the sense of היה “to be.”"
+          ],
+          [
+            "כתנות עור GARMENTS FOR THE SKIN — There are Agadoth which say that they were smooth as fingernails, cleaving to their skin; whereas some say that they were made of material that comes from skin, as for example, the hair of hares which is soft and warm, and of this He made garments for them (Genesis Rabbah 20:12)."
           ]
         ]
       }
