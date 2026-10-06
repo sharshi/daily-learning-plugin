@@ -2,6 +2,8 @@
 
 A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) (`dl`) for the daily learning: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam (1 and 3 perakim), Hayom Yom and Daf Yomi.
 
+<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" />
+
 - **One line above the prompt** with today's Hebrew date and the day's sections. Click a section to open its text; click **×** to hide the line until tomorrow.
 - **A sidebar** (`/dl`) with the full Hebrew text, laid out right to left:
   - Chumash with each verse's Rashi under it
@@ -22,7 +24,8 @@ A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) (`dl`
 
 Requires Claude Code 2.1.286 or later (mods) and `python3` (for the sidebar text and `/dl:text`).
 
-In a Claude Code session:
+In a Claude Code session:<img width="1377" height="1027" alt="Screenshot 2026-10-06 at 1 31 27 PM" src="https://github.com/user-attachments/assets/2ac93e6f-2334-4886-beb0-071f204dd5ad" />
+
 
 ```
 /plugin marketplace add sharshi/daily-learning
