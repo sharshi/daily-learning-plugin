@@ -30,9 +30,6 @@ declare module "claude-code" {
       tab: TabId;
       english: boolean;
       nikkud: boolean;
-      // Draw Hebrew in visual (reversed) order for terminals without bidi.
-      // null = automatic: on in the terminal, off on surfaces that do bidi.
-      flip: boolean | null;
       // Which perek of a multi-chapter Rambam reading is showing, for which day.
       perek: { key: string; i: number } | null;
     };

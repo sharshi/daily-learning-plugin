@@ -51,7 +51,6 @@ In the sidebar:
 | `1`–`6` | Switch tab (sections with no text that day are left out) |
 | `e` | English on or off |
 | `n` | Nikkud on or off |
-| `r` | Reverse the Hebrew yourself, if the automatic choice is wrong for your terminal |
 | `j` / `k` | Next / previous perek in Rambam ×3 |
 | `↑` `↓` | Scroll |
 | `Esc` | Back to the prompt |

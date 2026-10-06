@@ -78,7 +78,7 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   const texts = async () => (await ui.findAll({ type: "Text" })).map((t) => t.text);
   let t = await texts();
   // Rashi on 2:21 (מצלעותיו) sits after verse 2:21 and before verse 2:22.
-  const bare = (x: string) => x.replace(/[\u0591-\u05C7]/g, "");
+  const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
   const v21 = t.findIndex((x) => bare(x).startsWith("ויפל"));
   const r21 = t.findIndex((x) => bare(x).startsWith("מצלעותיו"));
   const v22 = t.findIndex((x) => bare(x).startsWith("ויבן"));
@@ -125,8 +125,8 @@ test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutM
   const read = async () => {
     const texts = await ui.findAll({ type: "Text" });
     return {
-      headings: texts.map((t) => t.text.trim()).filter((x) => x.startsWith("פרק")),
-      labels: texts.filter((t) => t.props.bold && /^[\u05D0-\u05EA]+\.$/.test(t.text.trim())).map((t) => t.text.trim()),
+      headings: texts.map((t) => t.text.replace(/\u200F/g, "").trim()).filter((x) => x.startsWith("פרק")),
+      labels: texts.filter((t) => t.props.bold && /^[\u05D0-\u05EA]+\.$/.test(t.text.replace(/\u200F/g, "").trim())).map((t) => t.text.replace(/\u200F/g, "").trim()),
       all: texts.map((t) => t.text).join("\n"),
     };
   };
@@ -169,7 +169,7 @@ test("Tanya shows the whole day's portion", { timeoutMs: 20000 }, async ($, on) 
   await ui.press({ key: "tab-tanya" } as never);
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   expect(t).toContain("Tanya · 25 Tishrei (Iggeret HaKodesh 25:1-5)");
-  const bare = t.replace(/[\u0591-\u05C7]/g, "");
+  const bare = t.replace(/[\u0591-\u05C7\u200F]/g, "");
   expect(bare).toContain("צוואת ריב"); // paragraph 1
   expect(bare).toContain("וזהו ״כי ה׳ אמר לו״"); // paragraph 5, the last of the day
 });
@@ -203,7 +203,6 @@ for (const [term, reversed] of [["ghostty", true], ["Apple_Terminal", false]] as
     // Genesis 2:20 opens ויקרא; reversed for Ghostty it reads ארקיו from the left.
     expect(texts.some((t) => t.includes(reversed ? "ארקיו" : "ויקרא"))).toBe(true);
     expect(texts.some((t) => t.includes(reversed ? "ויקרא" : "ארקיו"))).toBe(false);
-    expect((await ui.find({ key: "flip" }))?.text).toContain(reversed ? "on" : "off");
   });
 }
 
@@ -214,7 +213,7 @@ test("Mac Terminal: words go right to left, letters as written, edge punctuation
   const ui = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
   await ui.press({ key: "tab-rambam3" } as never);
   const texts = await ui.findAll({ type: "Text" });
-  const bare = (x: string) => x.replace(/[\u0591-\u05C7]/g, "");
+  const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
   // Terminal.app draws LRM/RLM/overrides as visible boxes: none may be sent.
   expect(texts.some((t) => /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/.test(t.text))).toBe(false);
   // Labels: the period sent before the letter, so it shows on the letter's left.
@@ -244,4 +243,21 @@ test("each letter's dagesh and shin dot come before its vowel", { timeoutMs: 200
   expect(t).not.toContain("בְּ");
   // אַשְׁרֵי: shin, shin dot, sheva.
   expect(t).toContain("שְׁ");
+});
+
+test("Desktop: Hebrew wrapped and right-aligned, in reading order inside right-to-left marks", { timeoutMs: 20000 }, async ($, on) => {
+  host(on);
+  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  await ui.press({ key: "tab-rambam3" } as never);
+  const texts = await ui.findAll({ type: "Text" });
+  const label = texts.find((t) => t.props.bold && t.text.replace(/‏/g, "") === "א.");
+  expect(label?.text).toBe("‏א.‏");
+  // 12:1 opens "החופר בור": in reading order, not reversed.
+  const bare = (x: string) => x.replace(/[֑-ׇ‏]/g, "");
+  expect(texts.some((t) => bare(t.text).startsWith("החופר בור ברשות"))).toBe(true);
+  expect(await ui.find({ key: "flip" })).toBeUndefined();
+  // The Hebrew date in the header, in reading order: כ״ה בתשרי תשפ״ז
+  expect(texts.some((t) => bare(t.text) === "\u05DB\u05F4\u05D4 \u05D1\u05EA\u05E9\u05E8\u05D9 \u05EA\u05E9\u05E4\u05F4\u05D6")).toBe(true);
 });

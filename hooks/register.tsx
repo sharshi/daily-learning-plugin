@@ -23,7 +23,6 @@ const status = atom({ plugin: "chitas", key: "status" } as const, null);
 const tab = atom({ plugin: "chitas", key: "tab" } as const, "chumash");
 const english = atom({ plugin: "chitas", key: "english" } as const, false);
 const nikkud = atom({ plugin: "chitas", key: "nikkud" } as const, true);
-const flip = atom({ plugin: "chitas", key: "flip" } as const, null);
 const perek = atom({ plugin: "chitas", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
@@ -133,6 +132,7 @@ async function openPane($: Host, t?: TabId) {
 
 // Terminals with a bidi of their own, which get termVisual's order (see
 // hebrew.ts); every other terminal gets visual's.
+const RLM = "\u200F";
 const BIDI_TERMINALS = new Set(["Apple_Terminal"]);
 
 // ---- ui -----------------------------------------------------------------
@@ -209,37 +209,34 @@ export const register: Register = (on, options) => {
   // /chitas-pane opens the sidebar and fetches the text in the background.
   on("command.run", { command: "chitas-pane" }, async ($) => {
     await openPane($);
-    return { text: "Chitas opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · r flip Hebrew · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Chitas opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
-    const [d, st, t, showEn, nk, fl, pk] = await Promise.all([
-      read($, day), read($, status), read($, tab), read($, english), read($, nikkud), read($, flip), read($, perek),
+    const [d, st, t, showEn, nk, pk] = await Promise.all([
+      read($, day), read($, status), read($, tab), read($, english), read($, nikkud), read($, perek),
     ]);
     // Load on sight: a render never writes state, so start it on a timer.
     if ((d?.key !== todayKey() || d.v !== DAY_V) && st?.phase !== "error") $.clock.after(0, () => void ensureDay($));
     const width = Math.max(20, e.props.bodyColumns - 1);
-    // Reverse the Hebrew ourselves only in a terminal that has no bidi of its own.
+    // Where the Hebrew is drawn decides its order: reversed here for a terminal
+    // with no bidi, word order only for one that reverses each word, and reading
+    // order for the Desktop app, which lays it out itself.
     const term = e.surface === "terminal" ? await $.env.get("TERM_PROGRAM") : undefined;
-    const isFlipped = fl ?? (e.surface === "terminal" && !BIDI_TERMINALS.has(term ?? ""));
-    const isBidiTerminal = e.surface === "terminal" && !isFlipped;
-    // How a line of Hebrew words is ordered for this surface.
-    const order = isFlipped ? visual : isBidiTerminal ? termVisual : (ws: string[]) => ws.join(" ");
+    const isBidiTerminal = e.surface === "terminal" && BIDI_TERMINALS.has(term ?? "");
+    const isFlipped = e.surface === "terminal" && !isBidiTerminal;
+    // How a line of Hebrew words is ordered for this surface. The Desktop app
+    // lays Hebrew out itself but in a left-to-right line, so each line is
+    // wrapped in right-to-left marks to keep edge punctuation on the Hebrew side.
+    const order = isFlipped ? visual : isBidiTerminal ? termVisual : (ws: string[]) => RLM + ws.join(" ") + RLM;
 
-    // A Hebrew paragraph: wrapped and reversed line by line where the surface
-    // has no bidi, otherwise one right-aligned Text the surface lays out.
-    // `label` (a halacha's "א.") leads the paragraph in bold, at its right edge.
+    // A Hebrew paragraph, wrapped here and right-aligned line by line, each line
+    // ordered for the surface. `label` (a halacha's "א.") leads the paragraph
+    // in bold, at the right end of its first line.
     const he = (s: string, k: string, color?: "magenta", label?: string) => {
       const txt = cleanHe(s, nk);
       if (!txt) return null;
-      if (!isFlipped && !isBidiTerminal)
-        return (
-          <Box key={k} flexDirection="row-reverse">
-            {label ? <Text bold color={color}>{label} </Text> : null}
-            <Text color={color}>{txt}</Text>
-          </Box>
-        );
       const lines = wrap(label ? `${label} ${txt}` : txt, width);
       return (
         <Box key={k} flexDirection="column" alignItems="flex-end">
@@ -358,11 +355,8 @@ export const register: Register = (on, options) => {
           <Text> </Text>
           <Button key="nikkud" plain hotkey="n" label={`nikkud: ${nk ? "on" : "off"}`}
             onPress={() => update($, nikkud, (v) => !v)} />
-          <Text> </Text>
-          <Button key="flip" plain hotkey="r" label={`flip Hebrew: ${isFlipped ? "on" : "off"}`}
-            onPress={() => update($, flip, () => !isFlipped)} />
         </Box>
-        <Text dimColor>{"─".repeat(width)}</Text>
+        {e.surface === "terminal" ? <Text dimColor>{"─".repeat(width)}</Text> : <Text> </Text>}
         {body()}
         {issues.length ? <Text dimColor>Issues: {issues.join("; ")}</Text> : null}
       </Box>
