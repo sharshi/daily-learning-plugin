@@ -186,3 +186,66 @@ test("the line above the prompt: Today's learning, the Library, and ▶ where ea
   await tick();
   expect(JSON.stringify(await ui.drawn())).toContain("Mishnayos · Berakhot 9");
 });
+
+// A turn as the engine runs it: the prompt, then (later) the turn's end.
+async function turn($: any, on: On) {
+  return {
+    start: () => $.prompt.submit({ text: "do the long thing" } as never),
+    end: () => $.turn.complete({ answer: "done" } as never),
+  };
+}
+
+test("a long turn: after 45s the line suggests learning, gone when the turn ends; not again for 30 minutes", { timeoutMs: 30000 }, async ($, on) => {
+  const { clock } = host(on);
+  const toasts: string[] = [];
+  on("ui.toast", async (_$, e: any) => { toasts.push(String(e.text ?? e)); return { value: undefined } as never; });
+  on("prompt.submit", async (_$, e: any) => ({ text: e.text }) as never);
+  on("turn.complete", async () => ({ text: "" }) as never);
+  on("command.register", async () => ({ value: undefined }) as never);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  // The line as drawn now (a mounted drawing redraws on acts, not on the clock).
+  const line = async () => { await settle(); return $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never }); };
+  const t = await turn($, on);
+
+  await t.start();
+  await clock.advance(44_000); await settle();
+  expect(await (await line()).find({ type: "Text", text: "Learn while you wait" })).toBeUndefined(); // not yet
+  await clock.advance(2_000); await settle();
+  expect((await (await line()).find({ type: "Text", text: "Learn while you wait" }))?.text).toContain("Learn while you wait");
+  // Nothing read in the Library yet: the next of today's sections not opened.
+  expect((await (await line()).find({ key: "wait-today" }))?.text).toBe("📅 Chumash + Rashi");
+  expect(await (await line()).find({ key: "wait-lib" })).toBeUndefined();
+
+  await t.end(); await settle();
+  expect(await (await line()).find({ type: "Text", text: "Learn while you wait" })).toBeUndefined();
+  expect(await (await line()).find({ key: "band-today" })).toBeDefined();
+  expect(toasts).toContain("Daily Learning: Claude is done.");
+
+  // Another long turn 10 minutes later: no suggestion (once every 30 minutes).
+  await clock.advance(10 * 60_000);
+  await t.start();
+  await clock.advance(60_000); await settle();
+  expect(await (await line()).find({ type: "Text", text: "Learn while you wait" })).toBeUndefined();
+  await t.end(); await settle();
+
+  // 30 minutes on, it may suggest again; a short turn never does.
+  await clock.advance(30 * 60_000);
+  await t.start();
+  await clock.advance(10_000); await t.end(); await clock.advance(60_000); await settle();
+  expect(await (await line()).find({ type: "Text", text: "Learn while you wait" })).toBeUndefined();
+});
+
+test("a long turn with the suggestion Off: nothing", { timeoutMs: 30000, options: { wait_suggest: "Off" } }, async ($, on) => {
+  const { clock } = host(on);
+  on("prompt.submit", async (_$, e: any) => ({ text: e.text }) as never);
+  on("turn.complete", async () => ({ text: "" }) as never);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
+  await settle();
+  await $.prompt.submit({ text: "x" } as never);
+  await clock.advance(5 * 60_000); await settle();
+  const now = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
+  expect(await now.find({ type: "Text", text: "Learn while you wait" })).toBeUndefined();
+});

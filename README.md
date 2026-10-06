@@ -23,6 +23,8 @@ Then `/dl` opens the sidebar. Needs Claude Code 2.1.286+ and `python3`.
 
 One line above the prompt: today's date, **📅 Today's learning**, **📚 Library**, and **▶** where you left each Library collection. Each opens the sidebar there; **×** hides the line until tomorrow.
 
+When Claude works on something long, the line offers to fill the wait: **⏳ Learn while you wait: ▶ Ketubot 5 · 📅 Tanya**, your Library place or the next part of today you haven't opened. It's gone when Claude finishes (with a quiet "Claude is done"), shows at most every 30 minutes, and can be set to 2 minutes or off in ⚙ Settings.
+
 In the sidebar, **📅 Today** is a menu of the day's sections; each opens into its full text, and **next ›** walks through the day in order:
 
 - **Chumash**, the day's aliyah, with Rashi under each verse

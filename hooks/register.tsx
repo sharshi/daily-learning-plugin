@@ -34,6 +34,7 @@ const libText = atom({ plugin: "dl", key: "libText" } as const, null);
 const libStatus = atom({ plugin: "dl", key: "libStatus" } as const, null);
 const libLast = atom({ plugin: "dl", key: "libLast" } as const, {});
 const prefsOver = atom({ plugin: "dl", key: "prefsOver" } as const, {});
+const todayOpened = atom({ plugin: "dl", key: "todayOpened" } as const, null);
 const perek = atom({ plugin: "dl", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
@@ -231,7 +232,8 @@ function ensureLibText($: Host, coll: Coll, b: LibBook, unit: number) {
 // last read, and load its text.
 async function openUnit($: Host, coll: Coll, b: LibBook, unit: number) {
   await update($, libPos, () => ({ coll, section: b.section, book: b.title, unit }));
-  const last = await update($, libLast, (v) => ({ ...v, [coll]: { book: b.title, unit } }));
+  const at = await $.clock.now();
+  const last = await update($, libLast, (v) => ({ ...v, [coll]: { book: b.title, unit, at } }));
   await $.store.set("lib-last", last);
   void ensureLibText($, coll, b, unit);
 }
@@ -248,6 +250,53 @@ async function continueLib($: Host, c: Coll) {
   const sh = (await read($, libShapes))[c];
   const bk = sh ? findBook(sh, l.book) : undefined;
   if (bk) await openUnit($, c, bk, l.unit);
+}
+
+// ---- while Claude works -----------------------------------------------------
+// A turn that runs long turns the line above the prompt into a suggestion to
+// learn meanwhile: where the Library was left, or the next section of today
+// not yet opened. Gone when the turn ends; at most once every 30 minutes;
+// never on a day the line was hidden; never takes the keyboard.
+const WAIT_MS: Record<string, number> = { "After 45 seconds": 45_000, "After 2 minutes": 120_000 };
+const SUGGEST_GAP_MS = 30 * 60_000;
+let waitTimer: { cancel: () => void } | null = null;
+let suggesting = false;     // the suggestion is on the line now
+let suggestedTurn = false;  // it was shown during this turn
+
+async function startWait($: Host, setting: unknown) {
+  waitTimer?.cancel();
+  waitTimer = null;
+  const ms = WAIT_MS[String(setting ?? "After 45 seconds")];
+  if (!ms) return;
+  waitTimer = $.clock.after(ms, () => void suggest($));
+}
+
+async function suggest($: Host) {
+  waitTimer = null;
+  if (hiddenFor === todayKey()) return;
+  const now = await $.clock.now();
+  const last = (await $.store.get("suggest-last")) as number | undefined;
+  if (last != null && now - last < SUGGEST_GAP_MS) return;
+  await $.store.set("suggest-last", now);
+  suggesting = suggestedTurn = true;
+  $.ui.invalidate("ui.render");
+}
+
+function endWait($: Host) {
+  waitTimer?.cancel();
+  waitTimer = null;
+  if (suggesting) { suggesting = false; $.ui.invalidate("ui.render"); }
+  if (suggestedTurn) { suggestedTurn = false; $.ui.toast("Daily Learning: Claude is done."); }
+}
+
+// Note a section of today as opened (the suggestion offers the next one not).
+async function markOpened($: Host, id: TabId) {
+  const key = todayKey();
+  const v = await update($, todayOpened, (o) => {
+    const ids = o?.key === key ? o.ids : [];
+    return { key, ids: ids.includes(id) ? ids : [...ids, id] };
+  });
+  await $.store.set("today-opened", v);
 }
 
 // ---- settings -------------------------------------------------------------
@@ -280,7 +329,7 @@ async function rowKey($: Host, field: string) {
     ?? rows.find((r) => tail.test(r.key) && /(^|[^A-Za-z0-9_])dl([^A-Za-z0-9_]|$)/.test(r.key)))?.key;
 }
 
-const PREF_FIELDS = ["hebrew_font", "english", "nikkud", "rashi", "text_size"];
+const PREF_FIELDS = ["hebrew_font", "english", "nikkud", "rashi", "text_size", "wait_suggest"];
 const optionsKey = (o: Record<string, unknown>) => JSON.stringify(PREF_FIELDS.map((f) => o[f] ?? null));
 
 // Change one setting from the sidebar. It takes effect at once and is kept in
@@ -338,13 +387,26 @@ export const register: Register = (on, options) => {
     const font = over.hebrew_font ?? options.hebrew_font;
     void applyFont($, font);
     void loadFont($, font);
-    const last = (await $.store.get("lib-last")) as Partial<Record<Coll, { book: string; unit: number }>> | undefined;
+    const last = (await $.store.get("lib-last")) as Partial<Record<Coll, { book: string; unit: number; at?: number }>> | undefined;
     if (last) await update($, libLast, () => last);
+    const opened = (await $.store.get("today-opened")) as { key: string; ids: TabId[] } | undefined;
+    if (opened?.key === todayKey()) await update($, todayOpened, () => opened);
     hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
     await $.command.register({ name: "dl-toggle", description: "Show or hide the daily learning line above the prompt" });
     await $.command.register({ name: "dl", description: "Open today's learning in a sidebar" });
     void ensure($, todayKey());
     void ensureDay($); // warm the sidebar text: from the store when cached
+    return next(e);
+  });
+
+  // A turn's start and end drive the suggestion to learn meanwhile.
+  on("prompt.submit", async ($, e, next) => {
+    const over = await read($, prefsOver);
+    void startWait($, over.wait_suggest ?? options.wait_suggest);
+    return next(e);
+  });
+  on("turn.complete", async ($, e, next) => {
+    endWait($);
     return next(e);
   });
 
@@ -360,6 +422,34 @@ export const register: Register = (on, options) => {
     if (state.error && !state.data)
       return <Box paddingX={1}><Text color="red">✡ dl · {state.error}</Text></Box>;
     if (!state.data) return next(e);
+
+    // While a long turn runs: the suggestion, in place of the launcher.
+    if (suggesting) {
+      const [dd, opened] = await Promise.all([read($, day), read($, todayOpened)]);
+      const recent = COLL_ORDER.filter((c) => last?.[c]).sort((a, b) => (last![b]!.at ?? 0) - (last![a]!.at ?? 0))[0];
+      const today = dd?.key === key ? shownTabs(dd) : [];
+      const done = opened?.key === key ? opened.ids : [];
+      const nextToday = today.find(([id]) => !done.includes(id));
+      const go = async (run: () => Promise<unknown>) => {
+        suggesting = false;
+        await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
+        await run();
+        $.ui.invalidate("ui.render");
+      };
+      return (
+        <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={3}>
+          <Text color="yellow">⏳ Claude's working. Learn while you wait:</Text>
+          {recent ? <Button key="wait-lib" plain label={`▶ ${lastLabel(last![recent]!)}`}
+            onPress={() => go(async () => { await continueLib($, recent); await update($, pageAtom, () => "library"); })} /> : null}
+          {nextToday
+            ? <Button key="wait-today" plain label={`📅 ${nextToday[1]}`}
+                onPress={() => go(async () => { void ensureDay($); await update($, tab, () => nextToday[0]); await update($, pageAtom, () => "read"); await markOpened($, nextToday[0]); })} />
+            : <Button key="wait-today" plain label="📅 Today's learning"
+                onPress={() => go(async () => { void ensureDay($); await update($, tab, () => null); await update($, pageAtom, () => "read"); })} />}
+          <Button key="wait-later" plain label="later" onPress={() => { suggesting = false; $.ui.invalidate("ui.render"); }} />
+        </Box>
+      );
+    }
 
     // One line, a launcher: the date, then Today's learning, the Library, and
     // a continue button for each Library collection being read; × hides the
@@ -518,6 +608,8 @@ export const register: Register = (on, options) => {
           Object.keys(ENGLISH).find((k) => ENGLISH[k] === prefs.english)!, "Staggered: under each paragraph. Side by side: English left, Hebrew right."),
         row("nikkud", "Nikkud", onOff, prefs.nikkud, "The Hebrew with or without vowels."),
         row("rashi", "Rashi", onOff, prefs.rashi, "Under each verse of Chumash and each passage of the Daf."),
+        row("wait_suggest", "While Claude works", [["After 45 seconds", "After 45 seconds"], ["After 2 minutes", "After 2 minutes"], ["Off", "Off"]],
+          String((po.wait_suggest ?? opts.wait_suggest) || "After 45 seconds"), "When a turn runs long, suggest learning on the line above the prompt (at most every 30 minutes)."),
         row("text_size", "Text size", [["Small", "Small"], ["Medium", "Medium"], ["Large", "Large"]], prefs.size,
           e.surface === "terminal" ? "For the Desktop app; a terminal uses its own size." : "The sidebar's text in the Desktop app."),
         <Button key="settings-done" label="‹ Back to the text" onPress={() => update($, pageAtom, () => "read")} />,
@@ -642,7 +734,11 @@ export const register: Register = (on, options) => {
       ];
     };
 
-    const openTab = async (id: TabId | null) => { await update($, tab, () => id); await update($, pageAtom, () => "read"); };
+    const openTab = async (id: TabId | null) => {
+      await update($, tab, () => id);
+      await update($, pageAtom, () => "read");
+      if (id) await markOpened($, id);
+    };
 
     // Today: a menu of the day's sections, each with what it is today.
     const todayMenu = (shown: [TabId, string][]) => [

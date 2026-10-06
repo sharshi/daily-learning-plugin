@@ -54,7 +54,9 @@ declare module "claude-code" {
       libShapes: Partial<Record<Coll, LibShape>>;
       libText: { ref: string; part: Part } | null;
       libStatus: { what: string; phase: "loading" | "error"; error?: string } | null;
-      libLast: Partial<Record<Coll, { book: string; unit: number }>>;
+      libLast: Partial<Record<Coll, { book: string; unit: number; at?: number }>>;
+      // Today's sections opened so far, for the date they belong to.
+      todayOpened: { key: string; ids: TabId[] } | null;
       // Settings chosen on the sidebar's settings page, over the plugin's
       // options (userConfig) until /config changes one of those.
       prefsOver: Record<string, string | boolean>;

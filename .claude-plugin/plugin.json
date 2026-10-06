@@ -1,7 +1,7 @@
 {
   "name": "dl",
   "displayName": "Daily Learning",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi) on one line above the prompt, and the full Hebrew text in a sidebar.",
   "author": {
     "name": "Shersheial",
@@ -68,6 +68,17 @@
         "Large"
       ],
       "default": "Medium"
+    },
+    "wait_suggest": {
+      "type": "string",
+      "title": "While Claude works",
+      "description": "When a turn runs long, suggest learning on the line above the prompt: after 45 seconds, after 2 minutes, or off. At most once every 30 minutes.",
+      "options": [
+        "After 45 seconds",
+        "After 2 minutes",
+        "Off"
+      ],
+      "default": "After 45 seconds"
     }
   }
 }
