@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Learning Plugin</title>
+<meta name="description" content="A Claude Code mod for the daily learning: Chitas, Rambam, Hayom Yom and Daf Yomi above the prompt, and the full Hebrew text in a sidebar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --surface-2: #f3f1ec;
+    --text: #1d1b18;
+    --muted: #6b665d;
+    --line: #e5e1d8;
+    --accent: #1f6f8b;
+    --accent-2: #9b3f8c;
+    --gold: #b4862b;
+    --code-bg: #1e2127;
+    --code-text: #e6e6e6;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121315;
+      --surface: #1a1c1f;
+      --surface-2: #22252a;
+      --text: #ece9e3;
+      --muted: #a29d93;
+      --line: #2e3136;
+      --accent: #62c4e0;
+      --accent-2: #d98fd0;
+      --gold: #e0b45a;
+      --code-bg: #0c0d0f;
+      --code-text: #e6e6e6;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121315; --surface: #1a1c1f; --surface-2: #22252a; --text: #ece9e3; --muted: #a29d93;
+    --line: #2e3136; --accent: #62c4e0; --accent-2: #d98fd0; --gold: #e0b45a; --code-bg: #0c0d0f;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 Inter, -apple-system, system-ui, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; }
+  .brand .star { color: var(--accent); font-size: 22px; }
+  .top nav { display: flex; gap: 18px; font-size: 14px; }
+  .top nav a { color: var(--muted); }
+
+  .hero { display: grid; gap: 28px; padding: 40px 0 24px; }
+  .hero h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.05; margin: 0; letter-spacing: -.025em; }
+  .hero h1 .he { font-family: "Frank Ruhl Libre", serif; font-weight: 700; color: var(--accent); display: block; font-size: .8em; margin-top: 8px; }
+  .hero p.lead { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 640px; margin: 0; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 15px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  :root[data-theme="dark"] .btn.primary { color: #0b1215; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #0b1215; } }
+  .btn:hover { text-decoration: none; filter: brightness(1.05); }
+
+  pre, code { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  .install { background: var(--code-bg); color: var(--code-text); border-radius: 12px; padding: 16px 18px; font-size: 14px; line-height: 1.7; overflow-x: auto; margin: 0; }
+  .install .c { color: #8b949e; }
+  .install .p { color: #62c4e0; }
+
+  .shot { margin: 24px 0 8px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); }
+  .shot img { display: block; width: 100%; height: auto; }
+  .caption { font-size: 13px; color: var(--muted); text-align: center; margin: 8px 0 0; }
+
+  section { padding: 44px 0 8px; }
+  section h2 { font-size: 26px; letter-spacing: -.015em; margin: 0 0 6px; }
+  section > .wrap > p.sub { color: var(--muted); margin: 0 0 22px; max-width: 680px; }
+
+  .band { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; box-shadow: var(--shadow); }
+  .band .date { color: var(--accent); font-weight: 600; }
+  .band .sec { color: var(--text); }
+  .band .muted { color: var(--muted); }
+  .band .x { margin-left: auto; color: var(--muted); }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .card .he { font-family: "Frank Ruhl Libre", serif; font-size: 20px; color: var(--text); direction: rtl; text-align: right; margin: 10px 0 0; line-height: 1.5; }
+  .card .rashi { font-family: "Frank Ruhl Libre", serif; color: var(--accent-2); direction: rtl; text-align: right; font-size: 17px; margin: 4px 0 0; }
+
+  .sample { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); }
+  .sample .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px; }
+  .sample .head b { color: var(--gold); }
+  .sample .head .nav { font-size: 13px; color: var(--muted); }
+  .sample .perek { font-family: "Frank Ruhl Libre", serif; color: var(--accent); font-weight: 700; font-size: 22px; text-align: right; direction: rtl; }
+  .sample .halacha { font-family: "Frank Ruhl Libre", serif; font-size: 21px; line-height: 1.75; direction: rtl; text-align: right; margin: 8px 0 14px; }
+  .sample .halacha b { margin-left: 6px; }
+  .sample .en { color: var(--muted); font-size: 14.5px; margin: -6px 0 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td code, li code, p code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+  .tablewrap { overflow-x: auto; }
+
+  .keys { display: grid; gap: 8px 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); font-size: 14.5px; }
+  kbd { display: inline-block; min-width: 24px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 12.5px; padding: 2px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--surface); margin-right: 6px; }
+
+  footer { padding: 48px 0 56px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 20px; }
+
+  @media (max-width: 560px) {
+    .top nav { display: none; }
+    .sample { padding: 16px; }
+    .band .x { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="star">✡</span> Daily Learning Plugin</div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#terminals">Terminals</a>
+      <a href="https://github.com/sharshi/daily-learning-plugin">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>Your daily learning, inside Claude Code.<span class="he">חת״ת · רמב״ם · היום יום · דף יומי</span></h1>
+    <p class="lead">A Claude Code mod that puts today's Chitas, Rambam, Hayom Yom and Daf Yomi on one line above the prompt, and the full Hebrew text, with Rashi and an English toggle, in a sidebar.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">Install</a>
+      <a class="btn" href="https://github.com/sharshi/daily-learning-plugin">View on GitHub</a>
+    </div>
+  </div>
+
+  <div class="shot">
+    <img src="https://github.com/user-attachments/assets/cc3e375f-ae6d-4b2f-9aa0-e33c699e71f6" alt="Claude Code with the Daily Learning sidebar open beside the conversation, showing the day's Hebrew text" width="1377" height="1027" loading="lazy">
+  </div>
+  <p class="caption">The sidebar beside a Claude Code session.</p>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>One line, then the whole day's text</h2>
+    <p class="sub">The line above the prompt shows the Hebrew date and the day's sections. Click a section to open it in the sidebar; click × to hide the line until tomorrow.</p>
+    <div class="band" role="img" aria-label="Example of the line above the prompt">
+      <span class="date">✡ 25 Tishrei 5787 · Parashat Bereshit</span>
+      <span class="sec">Chumash</span><span class="sec">Tehillim</span><span class="sec">Tanya</span>
+      <span class="sec">Rambam ×3</span><span class="sec">Rambam ×1</span><span class="sec">Daf Yomi</span>
+      <span class="x">×</span>
+    </div>
+
+    <div class="grid" style="margin-top:18px">
+      <div class="card">
+        <h3>Chumash with Rashi</h3>
+        <p>The day's aliyah, each verse followed by its Rashi, with Rashi's English from Rosenbaum &amp; Silbermann.</p>
+        <p class="he">וַיַּפֵּל יְהֹוָה אֱלֹהִים תַּרְדֵּמָה עַל־הָאָדָם</p>
+        <p class="rashi">מצלעותיו. מִסְּטָרָיו</p>
+      </div>
+      <div class="card">
+        <h3>Tehillim and Tanya</h3>
+        <p>Tehillim on the Chabad monthly cycle, and the whole day's Tanya portion, not just where it starts.</p>
+        <p class="he">אַשְׁרֵי תְמִימֵי־דָרֶךְ</p>
+      </div>
+      <div class="card">
+        <h3>Rambam, one perek at a time</h3>
+        <p>Rambam ×1 and ×3, each halacha numbered, with next and previous perek.</p>
+        <p class="he"><b>א.</b> הַחוֹפֵר בּוֹר בִּרְשׁוּת הָרַבִּים</p>
+      </div>
+      <div class="card">
+        <h3>Daf Yomi</h3>
+        <p>The daf one amud at a time, each passage with its Rashi, English on the toggle.</p>
+        <p class="he">דף יח.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sample">
+  <div class="wrap">
+    <h2>Hebrew that reads right</h2>
+    <p class="sub">Right to left, with nikkud placed correctly, in Frank Ruhl Libre or Shlomo. Te'amim are left out; nikkud and English are toggles.</p>
+    <div class="sample">
+      <div class="head"><b>Rambam ×3 · Damages to Property 12–14</b><span class="nav">‹ perek · perek 1 of 3 · next perek יג ›</span></div>
+      <div class="perek">פרק יב</div>
+      <p class="halacha"><b>א.</b>הַחוֹפֵר בּוֹר בִּרְשׁוּת הָרַבִּים וְנָפַל לְתוֹכוֹ שׁוֹר אוֹ חֲמוֹר וּמֵת, אֲפִלּוּ הָיָה הַבּוֹר מָלֵא גִּזּוֹת שֶׁל צֶמֶר…</p>
+      <p class="en"><b>1.</b> One who digs a pit in the public domain, and an ox or a donkey falls into it and dies…</p>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="sub">Requires Claude Code 2.1.286 or later and <code>python3</code>. In a Claude Code session:</p>
+<pre class="install"><span class="p">/plugin marketplace add</span> sharshi/daily-learning-plugin
+<span class="p">/plugin install</span> dl@daily-learning</pre>
+    <p style="margin-top:22px"><b>Commands</b></p>
+    <div class="tablewrap">
+      <table>
+        <tr><th>Command</th><th>What it does</th></tr>
+        <tr><td><code>/dl</code></td><td>Open the sidebar</td></tr>
+        <tr><td><code>/dl-toggle</code></td><td>Hide the line above the prompt for today, or bring it back</td></tr>
+        <tr><td><code>/dl:text</code></td><td>Print the day's text in the conversation, to ask Claude about it</td></tr>
+      </table>
+    </div>
+    <p style="margin-top:22px"><b>In the sidebar</b></p>
+    <div class="keys">
+      <div><kbd>1</kbd>–<kbd>7</kbd> switch tab</div>
+      <div><kbd>e</kbd> English on or off</div>
+      <div><kbd>n</kbd> nikkud on or off</div>
+      <div><kbd>j</kbd> <kbd>k</kbd> next / previous perek or amud</div>
+      <div><kbd>↑</kbd> <kbd>↓</kbd> scroll</div>
+      <div><kbd>Esc</kbd> back to the prompt</div>
+    </div>
+  </div>
+</section>
+
+<section id="terminals">
+  <div class="wrap">
+    <h2>Where it reads best</h2>
+    <p class="sub">Terminals draw Hebrew differently, so the sidebar lays it out per terminal.</p>
+    <div class="tablewrap">
+      <table>
+        <tr><th>Where</th><th>How it reads</th></tr>
+        <tr><td><b>Claude Desktop</b> (Code tab)</td><td>Best. Each reading is drawn with the chosen Hebrew font built in, laid out by the app's own text engine.</td></tr>
+        <tr><td><b>Ghostty</b>, and terminals without right-to-left support</td><td>Very good. The mod places every letter itself; the Hebrew font setting maps Ghostty's Hebrew to the bundled font.</td></tr>
+        <tr><td><b>macOS Terminal</b></td><td>Best effort. Terminal reorders Hebrew on its own; turn nikkud off for the cleanest lines.</td></tr>
+      </table>
+    </div>
+    <p style="margin-top:18px;color:var(--muted)">Choose <b>Frank Ruhl</b> (the default) or <b>Shlomo</b> under <code>/config</code> → dl → Hebrew font, or <b>System</b> to leave fonts alone.</p>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <h2>Sources and credits</h2>
+    <p class="sub">Texts and the calendar from <a href="https://developers.sefaria.org/">Sefaria</a>, the Hebrew date from <a href="https://www.hebcal.com/home/developer-apis">hebcal.com</a>, with <a href="https://www.chabad.org/dailystudy">chabad.org daily study</a> as a fallback. Fonts: Frank Ruhl Libre (The Frank Ruhl Libre Project Authors) and Shlomo (SIL International and Shlomo Orbach), both under the SIL Open Font License 1.1, via the <a href="https://github.com/aharonium/fonts">Open Siddur font pack</a>. The plugin's code is MIT licensed.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Daily Learning Plugin · MIT</span>
+    <a href="https://github.com/sharshi/daily-learning-plugin">github.com/sharshi/daily-learning-plugin</a>
+  </div>
+</footer>
+<script>
+  // Follow ?theme=light|dark when given; otherwise the system setting applies.
+  try {
+    const t = new URLSearchParams(location.search).get("theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch {}
+</script>
+</body>
+</html>
