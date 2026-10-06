@@ -28,6 +28,12 @@ Then `/dl` opens the sidebar. Requires Claude Code 2.1.286 or later and `python3
   - English off, **staggered** (under each paragraph) or **side by side** (English left, Hebrew right), Rashi's included (Rosenbaum & Silbermann's translation; Sefaria has no English for Rashi on the Gemara); nikkud and Rashi can be turned off; te'amim are left out.
   - A **⚙ settings** page for font, English, nikkud, Rashi and text size.
   - In the terminal, the date, tabs and toggles stay at the top as the text scrolls.
+- **A Library** (📚, key `l`) for learning through whole works at your own pace:
+  - **Mishnayos**: six sedarim, 63 masechtos, perek by perek, each mishnah numbered
+  - **Shas**: Talmud Bavli daf by daf, both amudim, each passage with its Rashi
+  - **Mishneh Torah**: the Rambam's 14 sefarim, hilchos perek by perek
+  - The menu goes collection › seder or sefer › masechta or hilchos › perek or daf, with breadcrumbs back up. **Continue** returns to where you left each one; next and previous cross into the next masechta; the last one read is marked.
+  - Loaded lazily from Sefaria: a collection's list when you open it (then kept), a perek or daf when you read it (the last 12 kept).
 - **`/dl:text`** prints the day's text into the conversation, where you can ask Claude about it.
 
 ```
@@ -49,8 +55,9 @@ In the sidebar:
 | `1`–`7` | Switch tab (sections with no text that day are left out) |
 | `e` | English: off → staggered → side by side |
 | `n` | Nikkud on or off |
+| `l` | Library, or back to today |
 | `s` | Settings page, or back to the text |
-| `j` / `k` | Next / previous perek (Rambam ×3) or amud (Daf Yomi) |
+| `j` / `k` | Next / previous: perek (Rambam ×3), amud (Daf Yomi), or in the Library the next perek or daf |
 | `↑` `↓` | Scroll |
 | `Esc` | Back to the prompt |
 
@@ -94,6 +101,7 @@ Terminals draw Hebrew in different ways, so the sidebar lays it out per terminal
 .claude-plugin/        plugin.json (manifest, Hebrew font setting) and marketplace.json
 hooks/register.tsx     the mod: band, sidebar, commands, fetching
 hooks/data.ts          the day's data shaped for drawing (pure)
+hooks/library.ts       the Library: collections, Sefaria's structure, refs, next/previous across books (pure)
 hooks/hebrew.ts        Hebrew cleanup, mark order, wrapping and right-to-left ordering (pure)
 hooks/svg.ts           the Desktop app's page: one SVG with the font embedded (pure)
 hooks/font-metrics.ts  the font's letter widths, for wrapping (generated)

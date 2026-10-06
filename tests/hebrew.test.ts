@@ -1,6 +1,6 @@
 import { expect, test } from "claude-code/testing";
 
-import { briefFrom, hebrewDate } from "../hooks/data";
+import { briefFrom, hebrewDate, linesFor } from "../hooks/data";
 import { cleanHe, cleanText, gematria, markOrder, termVisual, visual, wrap } from "../hooks/hebrew";
 import { SVG_LIMIT, svgPage, svgPages } from "../hooks/svg";
 
@@ -89,4 +89,11 @@ test("svgPages: a page too big for one SVG splits between paragraphs, each under
   }
   // One paragraph too big on its own can't be drawn as SVG.
   expect(svgPages([{ kind: "he", text: "\u05D0 ".repeat(70000) }], { key: "frank", base64: "A" })).toBe(null);
+});
+
+test("linesFor: Rashi shorter than the passages still lines up, passage by passage", () => {
+  const part = { title: "t", he: ["A1", "A2", "A3"], en: [], sections: [{ name: "h", short: "s", he: ["A1", "A2", "A3"], en: [], rashi: [["R1"], []] }] };
+  const lines = linesFor(part, 0, { english: "off", rashi: true });
+  const order = lines.filter((l) => l.kind === "he").map((l) => (l as { text: string }).text);
+  expect(order).toEqual(["A1", "R1", "A2", "A3"]);
 });

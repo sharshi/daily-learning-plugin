@@ -8,6 +8,8 @@ import type { EngineInterface as Host, Register, RenderChildren } from "claude-c
 import type { Day, Status, TabId } from "../types";
 import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, linesFor, todayKey, toDay } from "./data";
 import type { English } from "./data";
+import { COLL_ORDER, COLLS, findBook, libPart, parseShape, rashiRef, step, textRef, unitLabel, unitName } from "./library";
+import type { Coll, LibBook } from "./library";
 import type { Brief } from "./data";
 import { cleanHe, cleanText, termVisual, visual, wrap } from "./hebrew";
 import { svgPages } from "./svg";
@@ -26,6 +28,11 @@ const day = atom({ plugin: "dl", key: "day" } as const, null);
 const status = atom({ plugin: "dl", key: "status" } as const, null);
 const tab = atom({ plugin: "dl", key: "tab" } as const, "chumash");
 const pageAtom = atom({ plugin: "dl", key: "page" } as const, "read");
+const libPos = atom({ plugin: "dl", key: "libPos" } as const, {});
+const libShapes = atom({ plugin: "dl", key: "libShapes" } as const, {});
+const libText = atom({ plugin: "dl", key: "libText" } as const, null);
+const libStatus = atom({ plugin: "dl", key: "libStatus" } as const, null);
+const libLast = atom({ plugin: "dl", key: "libLast" } as const, {});
 const perek = atom({ plugin: "dl", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
@@ -162,6 +169,77 @@ async function loadFont($: Host, choice: unknown) {
   } catch {}
 }
 
+// ---- library ----------------------------------------------------------------
+// Everything loads when first needed: a collection's structure when it is
+// opened (kept for good: it doesn't change), a unit's text when it is read
+// (the store keeps the last LIB_KEEP). One fetch at a time per thing.
+const LIB_KEEP = 12;
+const libFetching = new Map<string, Promise<void>>();
+const once = (what: string, run: () => Promise<void>) => {
+  if (!libFetching.has(what)) libFetching.set(what, run().finally(() => libFetching.delete(what)));
+  return libFetching.get(what)!;
+};
+const sefaria = (path: string) => `https://www.sefaria.org/api/${path}`;
+const enc = (s: string) => s.split("/").map(encodeURIComponent).join("/");
+
+function ensureShape($: Host, coll: Coll) {
+  return once(`shape:${coll}`, async () => {
+    if ((await read($, libShapes))[coll]) return;
+    await update($, libStatus, () => ({ what: COLLS[coll].name, phase: "loading" as const }));
+    try {
+      const key = `lib-shape-${coll}`;
+      let shape = (await $.store.get(key)) as ReturnType<typeof parseShape> | undefined;
+      if (!shape?.sections?.length) {
+        shape = parseShape(coll, await getJSON($, sefaria(`shape/${enc(COLLS[coll].shape)}`)));
+        await $.store.set(key, shape);
+      }
+      await update($, libShapes, (v) => ({ ...v, [coll]: shape }));
+      await update($, libStatus, () => null);
+    } catch (e: any) {
+      await update($, libStatus, () => ({ what: COLLS[coll].name, phase: "error" as const, error: e?.message || String(e) }));
+    }
+  });
+}
+
+function ensureLibText($: Host, coll: Coll, b: LibBook, unit: number) {
+  const ref = textRef(b, unit);
+  return once(`text:${ref}`, async () => {
+    if ((await read($, libText))?.ref === ref) return;
+    await update($, libStatus, () => ({ what: ref, phase: "loading" as const }));
+    try {
+      const key = `lib-text-${ref}`;
+      let part = (await $.store.get(key)) as ReturnType<typeof libPart> | undefined;
+      if (!part) {
+        const q = "?version=hebrew&version=english&return_format=text_only";
+        const [text, rashi] = await Promise.all([
+          getJSON($, sefaria(`v3/texts/${encodeURIComponent(ref)}${q}`)),
+          coll === "bavli" ? getJSON($, sefaria(`v3/texts/${encodeURIComponent(rashiRef(b, unit))}?version=hebrew&return_format=text_only`)).catch(() => undefined) : undefined,
+        ]);
+        part = libPart(coll, b, unit, text, rashi);
+        // Keep the newest LIB_KEEP texts.
+        const recent = (((await $.store.get("lib-recent")) as string[] | undefined) ?? []).filter((k) => k !== key);
+        recent.unshift(key);
+        for (const old of recent.splice(LIB_KEEP)) await $.store.delete(old);
+        await $.store.set("lib-recent", recent);
+        await $.store.set(key, part);
+      }
+      await update($, libText, () => ({ ref, part: part! }));
+      await update($, libStatus, () => null);
+    } catch (e: any) {
+      await update($, libStatus, () => ({ what: ref, phase: "error" as const, error: e?.message || String(e) }));
+    }
+  });
+}
+
+// Open a unit: move the menu there, remember it as where this collection was
+// last read, and load its text.
+async function openUnit($: Host, coll: Coll, b: LibBook, unit: number) {
+  await update($, libPos, () => ({ coll, section: b.section, book: b.title, unit }));
+  const last = await update($, libLast, (v) => ({ ...v, [coll]: { book: b.title, unit } }));
+  await $.store.set("lib-last", last);
+  void ensureLibText($, coll, b, unit);
+}
+
 // ---- settings -------------------------------------------------------------
 // The sidebar's settings are the plugin's own (userConfig): they persist, show
 // in /config, and the settings page changes them with $.config.set, which
@@ -239,6 +317,8 @@ export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
     void applyFont($, options.hebrew_font);
     void loadFont($, options.hebrew_font);
+    const last = (await $.store.get("lib-last")) as Partial<Record<Coll, { book: string; unit: number }>> | undefined;
+    if (last) await update($, libLast, () => last);
     hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
     await $.command.register({ name: "dl-toggle", description: "Show or hide the daily learning line above the prompt" });
     await $.command.register({ name: "dl", description: "Open today's learning in a sidebar" });
@@ -291,14 +371,15 @@ export const register: Register = (on, options) => {
   // /dl opens the sidebar and fetches the text in the background.
   on("command.run", { command: "dl" }, async ($) => {
     await openPane($);
-    return { text: "Opened the sidebar. Keys: number keys for tabs · e English · n nikkud · s settings · j/k perek or amud · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Opened the sidebar. Keys: number keys for tabs · l Library · e English · n nikkud · s settings · j/k next/previous · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const Svg = e.surface === "desktop" ? $.ui.resolve(e).Svg : null;
-    const [d, st, t, pk, pg] = await Promise.all([
+    const [d, st, t, pk, pg, lp, shapes, lt, ls, ll] = await Promise.all([
       read($, day), read($, status), read($, tab), read($, perek), read($, pageAtom),
+      read($, libPos), read($, libShapes), read($, libText), read($, libStatus), read($, libLast),
     ]);
     const nk = prefs.nikkud;
     // Load on sight: a render never writes state, so start it on a timer.
@@ -412,8 +493,130 @@ export const register: Register = (on, options) => {
       ];
     };
 
+    // The Library: collection › section › book › unit, one level at a time,
+    // each loaded when first opened. Breadcrumbs go back up; Continue goes to
+    // where a collection was last read; next and previous cross into the
+    // next book.
+    const library = () => {
+      const pos = lp ?? {};
+      const go = (p: typeof pos) => update($, libPos, () => p);
+      const coll = pos.coll;
+      const shape = coll ? shapes?.[coll] : undefined;
+      if (coll && !shape) $.clock.after(0, () => void ensureShape($, coll));
+      const book = shape ? findBook(shape, pos.book) : undefined;
+      if (coll && book && pos.unit != null && lt?.ref !== textRef(book, pos.unit) && ls?.phase !== "error")
+        $.clock.after(0, () => void ensureLibText($, coll, book, pos.unit!));
+
+      const crumbs = [
+        <Button key="crumb-library" plain label="📚 Library" onPress={() => go({})} />,
+        ...(coll ? [<Text key="c1" dimColor> › </Text>, <Button key="crumb-coll" plain label={COLLS[coll].name} onPress={() => go({ coll })} />] : []),
+        ...(coll && pos.section && (shape?.sections.length ?? 0) > 1
+          ? [<Text key="c2" dimColor> › </Text>, <Button key="crumb-section" plain label={pos.section} onPress={() => go({ coll, section: pos.section })} />] : []),
+        ...(book ? [<Text key="c3" dimColor> › </Text>, <Button key="crumb-book" plain label={book.name} onPress={() => go({ coll, section: pos.section, book: book.title })} />] : []),
+      ];
+      const head = <Box key="crumbs" flexDirection="row" flexWrap="wrap" marginBottom={1}>{crumbs}</Box>;
+      const loading = ls && ls.phase === "loading" ? <Text key="loading" dimColor>Loading {ls.what}…</Text> : null;
+      const failed = ls && ls.phase === "error"
+        ? <Box key="failed" flexDirection="column"><Text color="red">Could not load {ls.what}: {ls.error}</Text>
+            <Button key="retry" label="Try again" onPress={async () => { await update($, libStatus, () => null); }} /></Box>
+        : null;
+      // "Continue: Berakhot 5" for a collection read before.
+      const cont = (c: Coll) => {
+        const l = ll?.[c];
+        if (!l) return null;
+        const s2 = shapes?.[c], b2 = s2 ? findBook(s2, l.book) : undefined;
+        const label = b2 ? `Continue ${unitLabel(b2, l.unit)}` : `Continue ${l.book.replace(/^(Mishnah|Mishneh Torah,) /, "")} ${l.unit}`;
+        return <Button key={`continue-${c}`} variant="primary" label={label} onPress={async () => {
+          await ensureShape($, c);
+          const sh = (await read($, libShapes))[c];
+          const bk = sh ? findBook(sh, l.book) : undefined;
+          if (bk) await openUnit($, c, bk, l.unit);
+        }} />;
+      };
+
+      // Collections.
+      if (!coll) return [
+        head,
+        ...COLL_ORDER.map((c) => (
+          <Box key={`coll-${c}`} flexDirection="column" marginBottom={1}>
+            <Box flexDirection="row">
+              <Button key={`open-${c}`} label={`${COLLS[c].name} · ${COLLS[c].he}`} onPress={() => go({ coll: c })} />
+              {cont(c)}
+            </Box>
+            <Text dimColor>{COLLS[c].blurb}</Text>
+          </Box>
+        )),
+      ];
+      if (!shape) return [head, failed ?? loading ?? <Text key="wait" dimColor>Loading {COLLS[coll].name}…</Text>];
+
+      // Sections (sedarim, sefarim); skipped when there is only one.
+      const section = pos.section ?? (shape.sections.length === 1 ? shape.sections[0]!.name : undefined);
+      if (!section) return [
+        head,
+        <Box key="cont" flexDirection="row">{cont(coll)}</Box>,
+        ...shape.sections.map((sec) => (
+          <Button key={`section-${sec.name.replace(/\W+/g, "-")}`} label={`${sec.name} · ${sec.he}  (${sec.books.length})`}
+            onPress={() => go({ coll, section: sec.name })} />
+        )),
+      ];
+
+      // Books (masechtos, hilchos).
+      if (!book) {
+        const sec = shape.sections.find((x) => x.name === section);
+        return [
+          head,
+          ...(sec?.books ?? []).map((b) => (
+            <Button key={`book-${b.title.replace(/\W+/g, "-")}`}
+              label={`${b.name} · ${b.he}  (${b.last - b.first + 1} ${COLLS[coll].unit === "daf" ? "dapim" : "perakim"})`}
+              variant={ll?.[coll]?.book === b.title ? "primary" : "secondary"}
+              onPress={() => go({ coll, section, book: b.title })} />
+          )),
+        ];
+      }
+
+      // Units (perakim, dapim): a grid, the last one read marked.
+      if (pos.unit == null) {
+        const lastHere = ll?.[coll]?.book === book.title ? ll[coll]!.unit : undefined;
+        return [
+          head,
+          <Text key="pick" dimColor>{book.he} · {book.name}: pick a {COLLS[coll].unit}</Text>,
+          <Box key="grid" flexDirection="row" flexWrap="wrap">
+            {Array.from({ length: book.last - book.first + 1 }, (_, i) => book.first + i).map((u) => (
+              <Button key={`unit-${u}`} label={unitName(coll, u).split(" ")[1]!}
+                variant={u === lastHere ? "primary" : "secondary"} dimColor={u !== lastHere}
+                onPress={() => openUnit($, coll, book, u)} />
+            ))}
+          </Box>,
+        ];
+      }
+
+      // Reading: the unit's text, with previous and next across books.
+      const unit = pos.unit;
+      const prev = step(shape, book.title, unit, -1), next = step(shape, book.title, unit, 1);
+      const nav = (where: "top" | "end") => (
+        <Box key={`libnav-${where}`} flexDirection="row" justifyContent="space-between">
+          {prev ? <Button key={`lib-prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
+            label={`‹ ${unitLabel(prev.book, prev.unit)}`} onPress={() => openUnit($, coll, prev.book, prev.unit)} /> : <Text> </Text>}
+          <Text dimColor>{unitLabel(book, unit)}</Text>
+          {next ? <Button key={`lib-next-${where}`} plain hotkey={where === "end" ? "j" : undefined} variant="primary"
+            label={`${unitLabel(next.book, next.unit)} ›`} onPress={() => openUnit($, coll, next.book, next.unit)} /> : <Text dimColor>end ✓</Text>}
+        </Box>
+      );
+      const part = lt?.ref === textRef(book, unit) ? lt.part : null;
+      const lines = part ? (part.sections ?? []).flatMap((_, i) => linesFor(part, i, { english: prefs.english, rashi: prefs.rashi })) : [];
+      return [
+        head,
+        nav("top"),
+        ...(part ? [<Text key="ltitle" color="yellow" bold>{part.title}</Text>, part.link ? <Text key="llink" dimColor>{part.link}</Text> : null, <Text key="lsp"> </Text>]
+          : [failed ?? loading ?? <Text key="lwait" dimColor>Loading {unitLabel(book, unit)}…</Text>]),
+        ...(part ? page(lines, "lib") : []),
+        nav("end"),
+      ];
+    };
+
     const body = () => {
       if (pg === "settings") return settings();
+      if (pg === "library") return library();
       if (!d || d.key !== todayKey()) {
         if (st?.phase === "error") return <Text color="red">Could not load: {st.error}</Text>;
         return <Text dimColor>Loading today's text… (the first fetch takes a little while)</Text>;
@@ -480,9 +683,10 @@ export const register: Register = (on, options) => {
     const toggleItems: [string, () => unknown, string][] = [
       ["english", () => setPref($, "english", nextEnglish), `English: ${englishLabel}`],
       ["nikkud", () => setPref($, "nikkud", !nk), `nikkud: ${nk ? "on" : "off"}`],
+      ["library", () => update($, pageAtom, (v) => v === "library" ? "read" : "library"), pg === "library" ? "‹ today" : "📚 library"],
       ["settings", () => update($, pageAtom, (v) => v === "settings" ? "read" : "settings"), pg === "settings" ? "‹ text" : "⚙ settings"],
     ];
-    const hotkeys: Record<string, string> = { english: "e", nikkud: "n", settings: "s" };
+    const hotkeys: Record<string, string> = { english: "e", nikkud: "n", library: "l", settings: "s" };
     const toggles = toggleItems.map(([key, press, label]) => [
       <Button key={key} plain hotkey={hotkeys[key]} label={label} onPress={press} />, label.length + 5,
     ] as const);

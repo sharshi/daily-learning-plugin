@@ -162,7 +162,9 @@ export function linesFor(p: Part, at: number, opt: LineOptions): Line[] {
   const showEn = opt.english !== "off";
   const para = (he: string[], en: string[], rashi: string[][] | undefined, rashiEn: string[][] | undefined, numbered: boolean) => {
     const paired = he.length === en.length;
-    const r = opt.rashi && rashi && rashi.length === he.length ? rashi : null;
+    // Rashi lines up with the paragraphs when it has no more entries than they
+    // do: Sefaria leaves the list short when the last ones have no Rashi.
+    const r = opt.rashi && rashi && rashi.length <= he.length ? rashi : null;
     he.forEach((h, i) => {
       const label = numbered ? `${gematria(i + 1)}.` : undefined;
       const enLabel = numbered ? `${i + 1}.` : undefined;
