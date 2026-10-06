@@ -103,7 +103,35 @@ def sefaria_calendar(g, use_cache, diaspora=True):
     return items
 
 
-def sefaria_text(ref, lang, use_cache):
+SEGMENT = re.compile(r"^(.*) (\d+):(\d+)$")
+
+
+def tanya_portion(ref, g, use_cache):
+    """Today's whole Tanya reading as a range.
+
+    Sefaria's calendar names only the paragraph a day's Tanya starts at
+    ("Iggeret HaKodesh 25:1"); the reading runs up to the paragraph before
+    the next day's start, or to the end of the chapter when tomorrow starts
+    in another one. Falls back to the ref as given.
+    """
+    m = SEGMENT.match(ref)
+    if not m:
+        return ref
+    book, chap, start = m.group(1), m.group(2), int(m.group(3))
+    nxt, _ = safe(sefaria_calendar, g + dt.timedelta(days=1), use_cache)
+    n = SEGMENT.match(((nxt or {}).get("Tanya Yomi") or {}).get("ref", ""))
+    if n and n.group(1) == book and n.group(2) == chap and int(n.group(3)) > start:
+        end = int(n.group(3)) - 1
+    else:
+        d, err = safe(get_json, "https://www.sefaria.org/api/v3/texts/"
+                      + urllib.parse.quote(f"{book} {chap}") + "?version=hebrew&return_format=text_only",
+                      use_cache)
+        text = ((d or {}).get("versions") or [{}])[0].get("text") or []
+        end = len(text) if isinstance(text, list) else 0
+    return f"{book} {chap}:{start}-{end}" if end > start else ref
+
+
+def sefaria_text(ref, lang, use_cache, chapters=False):
     q = urllib.parse.quote(ref)
     versions = {"he": "version=hebrew", "en": "version=english",
                 "both": "version=hebrew&version=english"}[lang]
@@ -113,7 +141,36 @@ def sefaria_text(ref, lang, use_cache):
     for v in d.get("versions", []):
         key = "he" if v.get("language") == "he" else "en"
         out[key] = flatten(v.get("text", []))
+        out[key + "_verses"] = by_verse(v.get("text", []))
+        if chapters:
+            out[key + "_chapters"] = by_chapter(v.get("text", []))
     return out
+
+
+def by_chapter(x):
+    """A range's paragraphs grouped by chapter: one list for a single chapter,
+    one per chapter when it spans several (Rambam's 3 perakim)."""
+    if not isinstance(x, list):
+        return []
+    if all(isinstance(c, list) for c in x):
+        return [flatten(c) for c in x]
+    return [flatten(x)]
+
+
+def by_verse(x):
+    """A commentary's text as one list of comments per verse.
+
+    Sefaria nests a commentary range as verse -> comments, or chapter ->
+    verse -> comments when it spans chapters; both come out as verse lists,
+    in the order of the verses of the range.
+    """
+    if not isinstance(x, list) or not x:
+        return []
+    if all(isinstance(c, list) and all(isinstance(v, list) for v in c) for c in x):
+        x = [v for c in x for v in c]  # chapters -> verses
+    if not all(isinstance(v, list) for v in x):
+        return []
+    return [[strip_html(c) for c in flatten(v)] for v in x]
 
 
 def flatten(x):
@@ -205,10 +262,11 @@ def build(g, args):
     # --- Tanya ---
     tanya = cal.get("Tanya Yomi")
     if tanya:
-        S["tanya"] = {"ref": tanya["ref"], "display": tanya["displayValue"]["en"],
-                      "link": sefaria_link(tanya["ref"]), "chabad": links["tanya"]}
+        ref = tanya_portion(tanya["ref"], g, use_cache)
+        S["tanya"] = {"ref": ref, "display": tanya["displayValue"]["en"],
+                      "link": sefaria_link(ref), "chabad": links["tanya"]}
         if args.full:
-            S["tanya"]["text"] = safe(sefaria_text, tanya["ref"], args.lang, use_cache)[0]
+            S["tanya"]["text"] = safe(sefaria_text, ref, args.lang, use_cache)[0]
     else:
         S["tanya"] = {"ref": None, "chabad": links["tanya"]}
 
@@ -222,8 +280,13 @@ def build(g, args):
                              "link": sefaria_link(r1["ref"])},
         "chabad": links["rambam"],
     }
-    if args.full and r1:
-        S["rambam"]["one_perek"]["text"] = safe(sefaria_text, r1["ref"], args.lang, use_cache)[0]
+    if args.full:
+        for key, r in (("three_perakim", r3), ("one_perek", r1)):
+            if r:
+                txt, err = safe(sefaria_text, r["ref"], args.lang, use_cache, True)
+                if err:
+                    errors.append(f"rambam {key.replace('_', ' ')} text: {err}")
+                S["rambam"][key]["text"] = txt
 
     # --- Hayom Yom ---
     if heb:
@@ -312,6 +375,8 @@ def render(brief, args):
     if r.get("three_perakim"):
         L.append(f"- Rambam (3 perakim): {r['three_perakim']['display']}")
         L.append(f"  {r['three_perakim']['link']}")
+        if r["three_perakim"].get("text"):
+            L.extend(render_text(r["three_perakim"]["text"], args.lang))
     if r.get("one_perek"):
         L.append(f"- Rambam (1 perek): {r['one_perek']['display']}")
         L.append(f"  {r['one_perek']['link']}")

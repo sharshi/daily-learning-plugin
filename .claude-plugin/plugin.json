@@ -1,9 +1,36 @@
 {
   "name": "chitas",
-  "version": "0.2.0",
-  "description": "Daily learning above the prompt (Chumash, Tehillim, Tanya, Rambam, Hayom Yom, Daf Yomi) and the full text in a sidebar with /chitas-pane. /chitas prints the text in the transcript.",
+  "displayName": "Chitas",
+  "version": "0.3.0",
+  "description": "Today's Chitas, Rambam, Hayom Yom and Daf Yomi in a band above the prompt, and the full Hebrew text (with Rashi, nikkud and an English toggle) in a sidebar.",
   "author": {
-    "name": "Shersheial"
+    "name": "Shersheial",
+    "url": "https://github.com/sharshi"
   },
-  "types": "./types/index.d.ts"
+  "homepage": "https://github.com/sharshi/chitas-cc-mod",
+  "repository": "https://github.com/sharshi/chitas-cc-mod",
+  "license": "MIT",
+  "keywords": [
+    "chitas",
+    "torah",
+    "rambam",
+    "tanya",
+    "tehillim",
+    "hebrew",
+    "daily-learning",
+    "mod"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "hebrew_font": {
+      "type": "string",
+      "title": "Hebrew font",
+      "description": "Shlomo SemiStam: install the bundled scribal font (with nikkud and te'amim) and use it for Hebrew in Ghostty. Terminal default: leave the terminal's fonts alone.",
+      "options": [
+        "Shlomo SemiStam",
+        "Terminal default"
+      ],
+      "default": "Terminal default"
+    }
+  }
 }

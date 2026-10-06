@@ -1,100 +1,57 @@
-// chitas mod — today's learning above the prompt, and the full text in a sidebar.
-// Band data: hebcal.com (Hebrew date) + sefaria.org (calendar refs), cached per
-// Gregorian day in memory and in the mod's $.store. The sidebar (/chitas-pane)
-// runs scripts/chitas.py --json --full for the text and caches that the same way.
+// chitas: today's learning in a band above the prompt, and the full text in a
+// sidebar (/chitas-pane). Both are cached per Gregorian day, in memory and in
+// the mod's $.store. Data: ./data.ts; Hebrew layout: ./hebrew.ts.
 
 import { atom, read, update } from "claude-code";
 import type { EngineInterface as Host, Register, RenderChildren } from "claude-code";
 
-import type { Day, Lang, Part, Status, TabId } from "../types";
+import type { Day, Status, TabId } from "../types";
+import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, todayKey, toDay } from "./data";
+import type { Brief } from "./data";
+import { cleanHe, cleanText, gematria, termVisual, visual, wrap } from "./hebrew";
 
 const PANE = "chitas";
-const ALIYOT = ["Rishon", "Sheini", "Shlishi", "Revi'i", "Chamishi", "Shishi", "Shvi'i"];
-const TEHILLIM: Record<number, string> = {
-  1: "1-9", 2: "10-17", 3: "18-22", 4: "23-28", 5: "29-34", 6: "35-38", 7: "39-43",
-  8: "44-48", 9: "49-54", 10: "55-59", 11: "60-65", 12: "66-68", 13: "69-71",
-  14: "72-76", 15: "77-78", 16: "79-82", 17: "83-87", 18: "88-89", 19: "90-96",
-  20: "97-103", 21: "104-105", 22: "106-107", 23: "108-112", 24: "113-118",
-  25: "119:1-96", 26: "119:97-176", 27: "120-134", 28: "135-139", 29: "140-144",
-  30: "145-150",
-};
-const HEB_MONTH: Record<string, string> = { "Sh'vat": "Shevat", Iyyar: "Iyar", Tamuz: "Tammuz" };
 const TABS: [TabId, string][] = [
-  ["chumash", "Chumash"], ["rashi", "Rashi"], ["tehillim", "Tehillim"],
-  ["tanya", "Tanya"], ["rambam", "Rambam"], ["hayom", "Hayom Yom"],
+  ["chumash", "Chumash + Rashi"], ["tehillim", "Tehillim"],
+  ["tanya", "Tanya"], ["rambam1", "Rambam ×1"], ["rambam3", "Rambam ×3"], ["hayom", "Hayom Yom"],
 ];
-const LANGS: Lang[] = ["both", "he", "en"];
+
 
 // ---- pane state ---------------------------------------------------------
 const day = atom({ plugin: "chitas", key: "day" } as const, null);
 const status = atom({ plugin: "chitas", key: "status" } as const, null);
 const tab = atom({ plugin: "chitas", key: "tab" } as const, "chumash");
-const lang = atom({ plugin: "chitas", key: "lang" } as const, "both");
+const english = atom({ plugin: "chitas", key: "english" } as const, false);
 const nikkud = atom({ plugin: "chitas", key: "nikkud" } as const, true);
 const flip = atom({ plugin: "chitas", key: "flip" } as const, null);
+const perek = atom({ plugin: "chitas", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
-type Brief = { heb: { hd: number; hm: string; hy: number; hebrew: string; events: string[] }; sections: [string, string][] };
 let state: { key: string | null; data: Brief | null; error: string | null; loading: boolean } =
   { key: null, data: null, error: null, loading: false };
 let collapsed = false;
 
-function todayKey(d = new Date()) {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-// ---- fetch (band) -------------------------------------------------------
 async function getJSON($: Host, url: string) {
-  const res = await $.http.fetch(url, { headers: { "User-Agent": "chitas-mod/0.1", Accept: "application/json" } });
+  const res = await $.http.fetch(url, {
+    headers: { "User-Agent": "chitas-cc-mod (+https://github.com/sharshi/chitas-cc-mod)", Accept: "application/json" },
+  });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return JSON.parse(res.text);
 }
 
-async function hebrewDate($: Host, d: Date) {
-  const j = await getJSON($,
-    `https://www.hebcal.com/converter?cfg=json&g2h=1&gy=${d.getFullYear()}&gm=${d.getMonth() + 1}&gd=${d.getDate()}`,
-  );
-  return { hd: +j.hd, hm: j.hm, hy: +j.hy, hebrew: j.hebrew || "", events: j.events || [] };
-}
-
-async function build($: Host, d: Date): Promise<Brief> {
-  const [heb, cal] = await Promise.all([
-    hebrewDate($, d),
-    getJSON($, `https://www.sefaria.org/api/calendars?year=${d.getFullYear()}&month=${d.getMonth() + 1}&day=${d.getDate()}&diaspora=1`),
-  ]);
-  const items = Object.fromEntries((cal.calendar_items || []).map((i: any) => [i.title.en, i]));
-  const out: Brief = { heb, sections: [] };
-
-  const par = items["Parashat Hashavua"];
-  if (par) {
-    const wd = d.getDay(); // Sun=0 … Sat=6
-    const aliyot = par.extraDetails?.aliyot || [];
-    const ref = aliyot[wd] || par.ref;
-    out.sections.push(["Chumash", `${par.displayValue.en} · ${ALIYOT[wd]} (${ref})`]);
-  }
-
-  let teh = TEHILLIM[heb.hd];
-  if (heb.hd === 29) {
+// Fetch what the band needs for Gregorian day `d` and shape it.
+async function buildBrief($: Host, d: Date): Promise<Brief> {
+  const [heb, cal] = await Promise.all([getJSON($, hebcalUrl(d)), getJSON($, calendarUrl(d))]);
+  let monthHas30 = true;
+  if (+heb.hd === 29) {
     const next = new Date(d); next.setDate(d.getDate() + 1);
-    try { if ((await hebrewDate($, next)).hd !== 30) teh = "140-150"; } catch {}
+    try { monthHas30 = +(await getJSON($, hebcalUrl(next))).hd === 30; } catch {}
   }
-  out.sections.push(["Tehillim", `${teh}  (day ${heb.hd})`]);
-
-  const tanya = items["Tanya Yomi"];
-  if (tanya) out.sections.push(["Tanya", tanya.displayValue.en]);
-
-  const r3 = items["Daily Rambam (3 Chapters)"], r1 = items["Daily Rambam"];
-  if (r3) out.sections.push(["Rambam ×3", r3.displayValue.en]);
-  if (r1) out.sections.push(["Rambam ×1", r1.displayValue.en]);
-
-  out.sections.push(["Hayom Yom", `${HEB_MONTH[heb.hm] || heb.hm} ${heb.hd}`]);
-
-  const daf = items["Daf Yomi"];
-  if (daf) out.sections.push(["Daf Yomi", daf.displayValue.en]);
-  return out;
+  return briefFrom(d, hebrewDate(heb), cal, monthHas30);
 }
 
+// The band's brief for `key`: from memory, the store, or the network. The band
+// redraws when it lands.
 async function ensure($: Host, key: string) {
   if (state.key === key && (state.data || state.loading)) return;
   state = { key, data: null, error: null, loading: true };
@@ -105,7 +62,7 @@ async function ensure($: Host, key: string) {
       state.data = cached;
       return;
     }
-    const data = await build($, new Date(`${key}T12:00:00`));
+    const data = await buildBrief($, new Date(`${key}T12:00:00`));
     if (state.key !== key) return; // day rolled over mid-fetch
     state.data = data;
     // Keep only today's brief in the store.
@@ -117,42 +74,6 @@ async function ensure($: Host, key: string) {
     if (state.key === key) state.loading = false;
     $.ui.invalidate("ui.render");
   }
-}
-
-// ---- fetch (pane) -------------------------------------------------------
-// Sefaria nests chapters as arrays of arrays; flatten to paragraphs.
-function flat(v: unknown): string[] {
-  if (v == null) return [];
-  if (Array.isArray(v)) return v.flatMap(flat);
-  return [String(v)];
-}
-
-function part(title: string, s: any, text: any): Part {
-  return { title, link: s?.link, chabad: s?.chabad, he: flat(text?.he), en: flat(text?.en) };
-}
-
-function toDay(key: string, j: any): Day {
-  const s = j.sections || {};
-  const ch = s.chumash, rb = s.rambam || {};
-  const parts: Record<TabId, Part[]> = {
-    chumash: ch ? [part(`${ch.parsha} · ${ch.aliyah} (${ch.ref})`, ch, ch.text)] : [],
-    rashi: ch?.rashi ? [part(ch.rashi.ref, { link: ch.link, chabad: ch.chabad }, ch.rashi)] : [],
-    tehillim: s.tehillim ? [part(`Tehillim ${s.tehillim.ref} (day ${s.tehillim.day_of_month})`, s.tehillim, s.tehillim.text)] : [],
-    tanya: s.tanya ? [part(`Tanya · ${s.tanya.display || s.tanya.ref}`, s.tanya, s.tanya.text)] : [],
-    rambam: [
-      ...(rb.three_perakim ? [part(`Rambam ×3 · ${rb.three_perakim.display}`, { ...rb.three_perakim, chabad: rb.chabad }, rb.three_perakim.text)] : []),
-      ...(rb.one_perek ? [part(`Rambam ×1 · ${rb.one_perek.display}`, { ...rb.one_perek, chabad: rb.chabad }, rb.one_perek.text)] : []),
-    ],
-    hayom: s.hayom_yom ? [part(s.hayom_yom.ref, s.hayom_yom, s.hayom_yom.text)] : [],
-  };
-  const hd = j.hebrew || {};
-  return {
-    key,
-    title: `${j.weekday} ${j.gregorian} · ${hd.hd} ${hd.hm} ${hd.hy}`,
-    hebrew: hd.hebrew || "",
-    parts,
-    errors: j.errors || [],
-  };
 }
 
 // The fetch in flight, by day. A module variable, not $.state: a reload drops
@@ -168,14 +89,15 @@ function ensureDay($: Host) {
 
 async function loadDay($: Host, key: string) {
   const d0 = await read($, day);
-  if (d0?.key === key) {
+  if (d0?.key === key && d0.v === DAY_V) {
     await update($, status, () => ({ key, phase: "ready" }) as Status);
     return;
   }
   await update($, status, () => ({ key, phase: "loading" }) as Status);
-  const storeKey = `day-${key}`;
+  const storeKey = `day-v${DAY_V}-${key}`;
   try {
     let d = (await $.store.get(storeKey)) as Day | undefined;
+    // Older builds kept a Day under day-<date>; the prune below removes it.
     if (!d) {
       const script = `${$.plugin.root}/scripts/chitas.py`;
       const r = await $.process.run(["python3", script, "--json", "--full"], { timeoutMs: 300_000 });
@@ -192,10 +114,15 @@ async function loadDay($: Host, key: string) {
   }
 }
 
+// A section Sefaria had no text for (Hayom Yom today, often) is left out of
+// the sidebar and the band instead of pointing at a page that does not load.
+const hasText = (d: Day, id: TabId) => (d.parts[id] ?? []).some((p) => p.he.length || p.en.length);
+const shownTabs = (d: Day | null) => TABS.filter(([id]) => !d || hasText(d, id));
+
 // Band rows → the sidebar tab that holds their text.
 const BAND_TAB: Record<string, TabId> = {
   Chumash: "chumash", Tehillim: "tehillim", Tanya: "tanya",
-  "Rambam ×3": "rambam", "Rambam ×1": "rambam", "Hayom Yom": "hayom",
+  "Rambam ×3": "rambam3", "Rambam ×1": "rambam1", "Hayom Yom": "hayom",
 };
 
 async function openPane($: Host, t?: TabId) {
@@ -204,70 +131,31 @@ async function openPane($: Host, t?: TabId) {
   await $.ui.open({ id: PANE, title: "Chitas", focus: true });
 }
 
-// ---- Hebrew -------------------------------------------------------------
-// Combining marks: te'amim (cantillation) and nikkud (vowels, dagesh, shin dots).
-const MARK = /[\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]/;
-const TEAMIM = /[\u0591-\u05AF\u05BD]/g;
-const NIKKUD = /[\u05B0-\u05BC\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]/g;
-const HEB = /[\u05D0-\u05EA]/;
-const MIRROR: Record<string, string> = { "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{", "<": ">", ">": "<" };
-
-function cleanText(s: string) {
-  return s
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;|&thinsp;|&ensp;|&emsp;/g, " ")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-    .replace(/&[a-z]+;/g, "")
-    .replace(/\{[\u05E1\u05E4]\}/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function cleanHe(s: string, withNikkud: boolean) {
-  let t = cleanText(s).replace(TEAMIM, "").replace(/\s*\u05C0\s*/g, " "); // drop te'amim and paseq
-  if (!withNikkud) t = t.replace(NIKKUD, "");
-  return t;
-}
-
-// Base letters with their marks, so reversing keeps each vowel on its letter.
-function clusters(w: string) {
-  const out: string[] = [];
-  for (const ch of w) {
-    if (MARK.test(ch) && out.length) out[out.length - 1] += ch;
-    else out.push(ch);
-  }
-  return out;
-}
-
-const cells = (w: string) => clusters(w).length;
-
-function wrap(s: string, width: number) {
-  const lines: string[][] = [];
-  let line: string[] = [], n = 0;
-  for (const w of s.split(" ").filter(Boolean)) {
-    const c = cells(w);
-    if (line.length && n + 1 + c > width) { lines.push(line); line = []; n = 0; }
-    n += (line.length ? 1 : 0) + c;
-    line.push(w);
-  }
-  if (line.length) lines.push(line);
-  return lines;
-}
-
-// Visual order for a terminal that draws everything left to right: words right
-// to left, letters inside a Hebrew word reversed, numbers and Latin kept as is.
-function visual(words: string[]) {
-  return words
-    .slice()
-    .reverse()
-    .map((w) => (HEB.test(w) ? clusters(w).reverse().map((c) => MIRROR[c] ?? c).join("") : w))
-    .join(" ");
-}
+// Terminals with a bidi of their own, which get termVisual's order (see
+// hebrew.ts); every other terminal gets visual's.
+const BIDI_TERMINALS = new Set(["Apple_Terminal"]);
 
 // ---- ui -----------------------------------------------------------------
-export const register: Register = (on) => {
+// The "Hebrew font" setting: install the bundled font and map Ghostty's Hebrew
+// to it, or take that mapping back out. Terminal only: the Desktop app draws
+// Hebrew with its own fonts. Says so only when something changed.
+async function applyFont($: Host, choice: unknown) {
+  const script = `${$.plugin.root}/scripts/install-font.sh`;
+  const argv = choice === "Shlomo SemiStam" ? ["/bin/sh", script] : ["/bin/sh", script, "--remove"];
+  try {
+    const r = await $.process.run(argv, { timeoutMs: 30_000 });
+    const changed = r.stdout.split("\n").filter((l) => l.startsWith("changed:"));
+    if (r.exitCode !== 0) $.ui.toast(`chitas: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
+    else if (changed.length)
+      $.ui.toast(`chitas: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
+  } catch (err: any) {
+    $.ui.toast(`chitas: Hebrew font setting failed: ${err?.message || err}`);
+  }
+}
+
+export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
+    void applyFont($, options.hebrew_font);
     await $.command.register({ name: "chitas-toggle", description: "Collapse or expand the chitas band above the prompt" });
     await $.command.register({ name: "chitas-pane", description: "Open today's Chitas text in a sidebar" });
     void ensure($, todayKey());
@@ -275,9 +163,11 @@ export const register: Register = (on) => {
     return next(e);
   });
 
-  on("ui.render", { component: "AbovePrompt" }, ($, e, next) => {
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const key = todayKey();
+    const dd = await read($, day);
+    const full = dd?.key === key && dd.v === DAY_V ? dd : null;
     void ensure($, key); // no-op unless the date rolled over
 
     if (state.loading && !state.data)
@@ -298,7 +188,7 @@ export const register: Register = (on) => {
     return (
       <Box paddingX={1} flexDirection="column">
         <Button key="open" plain label={header} onPress={() => openPane($)} />
-        {sections.map(([l, v]) => {
+        {sections.filter(([l]) => !(full && BAND_TAB[l] && !hasText(full, BAND_TAB[l]))).map(([l, v]) => {
           const t = BAND_TAB[l];
           const label = `${l.padEnd(10)} ${v}`;
           return t
@@ -319,59 +209,120 @@ export const register: Register = (on) => {
   // /chitas-pane opens the sidebar and fetches the text in the background.
   on("command.run", { command: "chitas-pane" }, async ($) => {
     await openPane($);
-    return { text: "Chitas opened in the sidebar. Keys: 1-6 tabs · l language · n nikkud · r flip Hebrew · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Chitas opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · r flip Hebrew · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
-    const [d, st, t, lg, nk, fl] = await Promise.all([
-      read($, day), read($, status), read($, tab), read($, lang), read($, nikkud), read($, flip),
+    const [d, st, t, showEn, nk, fl, pk] = await Promise.all([
+      read($, day), read($, status), read($, tab), read($, english), read($, nikkud), read($, flip), read($, perek),
     ]);
     // Load on sight: a render never writes state, so start it on a timer.
-    if (d?.key !== todayKey() && st?.phase !== "error") $.clock.after(0, () => void ensureDay($));
+    if ((d?.key !== todayKey() || d.v !== DAY_V) && st?.phase !== "error") $.clock.after(0, () => void ensureDay($));
     const width = Math.max(20, e.props.bodyColumns - 1);
-    const isFlipped = fl ?? e.surface === "terminal";
+    // Reverse the Hebrew ourselves only in a terminal that has no bidi of its own.
+    const term = e.surface === "terminal" ? await $.env.get("TERM_PROGRAM") : undefined;
+    const isFlipped = fl ?? (e.surface === "terminal" && !BIDI_TERMINALS.has(term ?? ""));
+    const isBidiTerminal = e.surface === "terminal" && !isFlipped;
+    // How a line of Hebrew words is ordered for this surface.
+    const order = isFlipped ? visual : isBidiTerminal ? termVisual : (ws: string[]) => ws.join(" ");
 
     // A Hebrew paragraph: wrapped and reversed line by line where the surface
     // has no bidi, otherwise one right-aligned Text the surface lays out.
-    const he = (s: string, k: string) => {
+    // `label` (a halacha's "א.") leads the paragraph in bold, at its right edge.
+    const he = (s: string, k: string, color?: "magenta", label?: string) => {
       const txt = cleanHe(s, nk);
       if (!txt) return null;
-      if (!isFlipped)
-        return <Box key={k} flexDirection="column" alignItems="flex-end"><Text>{txt}</Text></Box>;
+      if (!isFlipped && !isBidiTerminal)
+        return (
+          <Box key={k} flexDirection="row-reverse">
+            {label ? <Text bold color={color}>{label} </Text> : null}
+            <Text color={color}>{txt}</Text>
+          </Box>
+        );
+      const lines = wrap(label ? `${label} ${txt}` : txt, width);
       return (
         <Box key={k} flexDirection="column" alignItems="flex-end">
-          {wrap(txt, width).map((ws) => <Text wrap="truncate">{visual(ws)}</Text>)}
+          {lines.map((ws, li) =>
+            label && li === 0
+              ? <Box flexDirection="row">
+                  <Text color={color}>{order(ws.slice(1))} </Text>
+                  <Text bold color={color}>{order(ws.slice(0, 1))}</Text>
+                </Box>
+              : <Text wrap="truncate" color={color}>{order(ws)}</Text>)}
         </Box>
       );
     };
-    const en = (s: string, k: string) => {
+    const en = (s: string, k: string, color?: "magenta", label?: string) => {
       const txt = cleanText(s);
-      return txt ? <Box key={k}><Text>{txt}</Text></Box> : null;
+      if (!txt) return null;
+      return (
+        <Box key={k} flexDirection="row">
+          {label ? <Text bold dimColor={!color} color={color}>{label} </Text> : null}
+          <Text dimColor={!color} color={color}>{txt}</Text>
+        </Box>
+      );
     };
+    // A bold chapter heading, right-aligned like the Hebrew under it.
+    const heading = (s: string, k: string) => (
+      <Box key={k} flexDirection="column" alignItems="flex-end">
+        <Text bold color="cyan">{order(s.split(" "))}</Text>
+      </Box>
+    );
 
     const body = () => {
       if (!d || d.key !== todayKey()) {
         if (st?.phase === "error") return <Text color="red">Could not load: {st.error}</Text>;
         return <Text dimColor>Loading today's text… (the first fetch takes a little while)</Text>;
       }
-      const parts = d.parts[t];
+      // A tab kept from an older build, or one hidden for lack of text, falls back to Chumash.
+      const parts = shownTabs(d).some(([id]) => id === t) ? d.parts[t] : d.parts.chumash;
       if (!parts.length) return <Text dimColor>Nothing listed for this today.</Text>;
       return parts.map((p, pi) => {
-        const showHe = lg !== "en", showEn = lg !== "he";
-        // Interleave verse by verse when the two languages line up.
-        const paired = showHe && showEn && p.he.length === p.en.length;
+        // Verse by verse: the Hebrew, the English when on, then that verse's Rashi.
+        const paired = p.he.length === p.en.length;
+        const rashi = p.rashi && p.rashi.he.length === p.he.length ? p.rashi : null;
         const rows: RenderChildren[] = [];
-        if (paired) {
-          p.he.forEach((hv, i) => {
-            rows.push(he(hv, `${pi}h${i}`));
-            rows.push(en(p.en[i]!, `${pi}e${i}`));
-            rows.push(<Text key={`${pi}s${i}`}> </Text>);
+        const chapters = p.chapters;
+        if (chapters) {
+          // Rambam: one perek at a time under its heading, each halacha led by
+          // its number, with buttons to the previous and next perek.
+          const n = chapters.length;
+          const at = Math.min(pk?.key === d.key ? pk.i : 0, n - 1);
+          const go = (i: number) => update($, perek, () => ({ key: d.key, i }));
+          const nav = (where: "top" | "end") => n > 1 ? (
+            <Box key={`${pi}nav-${where}`} flexDirection="row" justifyContent="space-between">
+              {at > 0
+                ? <Button key={`perek-prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
+                    label={`‹ perek ${gematria(chapters[at - 1]!.n)}`} onPress={() => go(at - 1)} />
+                : <Text> </Text>}
+              <Text dimColor>perek {at + 1} of {n}</Text>
+              {at < n - 1
+                ? <Button key={`perek-next-${where}`} plain hotkey={where === "end" ? "j" : undefined}
+                    variant="primary" label={`next perek ${gematria(chapters[at + 1]!.n)} ›`} onPress={() => go(at + 1)} />
+                : <Text dimColor>done ✓</Text>}
+            </Box>
+          ) : null;
+          const c = chapters[at]!;
+          rows.push(nav("top"));
+          rows.push(heading(`פרק ${gematria(c.n)}`, `${pi}c${at}`));
+          const aligned = c.he.length === c.en.length;
+          c.he.forEach((hv, i) => {
+            rows.push(he(hv, `${pi}c${at}h${i}`, undefined, `${gematria(i + 1)}.`));
+            if (showEn && aligned) rows.push(en(c.en[i]!, `${pi}c${at}e${i}`, undefined, `${i + 1}.`));
+            rows.push(<Text key={`${pi}c${at}s${i}`}> </Text>);
           });
-        } else {
-          if (showHe) p.he.forEach((hv, i) => { rows.push(he(hv, `${pi}h${i}`)); rows.push(<Text key={`${pi}hs${i}`}> </Text>); });
-          if (showEn) p.en.forEach((x, i) => { rows.push(en(x, `${pi}e${i}`)); rows.push(<Text key={`${pi}es${i}`}> </Text>); });
-        }
+          rows.push(nav("end"));
+        } else p.he.forEach((hv, i) => {
+          rows.push(he(hv, `${pi}h${i}`));
+          if (showEn && paired) rows.push(en(p.en[i]!, `${pi}e${i}`));
+          rashi?.he[i]?.forEach((c, j) => rows.push(he(c, `${pi}r${i}.${j}`, "magenta")));
+          if (showEn) rashi?.en[i]?.forEach((c, j) => rows.push(en(c, `${pi}re${i}.${j}`, "magenta")));
+          rows.push(<Text key={`${pi}s${i}`}> </Text>);
+        });
+        if (showEn && !paired && !chapters) p.en.forEach((x, i) => { rows.push(en(x, `${pi}e${i}`)); rows.push(<Text key={`${pi}es${i}`}> </Text>); });
+        // Rashi that did not line up with the verses still shows, after them.
+        if (p.rashi && !rashi) p.rashi.he.flat().forEach((c, j) => rows.push(he(c, `${pi}rx${j}`, "magenta")));
         const empty = !p.he.length && !p.en.length;
         return (
           <Box key={`p${pi}`} flexDirection="column" marginBottom={1}>
@@ -386,22 +337,24 @@ export const register: Register = (on) => {
     };
 
     const hebDate = d?.hebrew ? cleanHe(d.hebrew, nk) : "";
+    // Missing text hides its tab, so its "... text: 404" line says nothing useful.
+    const issues = (d?.errors ?? []).filter((x) => !/ text: /.test(x));
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="space-between">
           <Text color="cyan" bold>✡ {d?.title ?? "Chitas"}</Text>
-          {hebDate ? <Text color="cyan">{isFlipped ? visual(hebDate.split(" ")) : hebDate}</Text> : null}
+          {hebDate ? <Text color="cyan">{order(hebDate.split(" "))}</Text> : null}
         </Box>
         <Box flexDirection="row" flexWrap="wrap">
-          {TABS.map(([id, label], i) => (
+          {shownTabs(d).map(([id, label], i) => (
             <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)}
               variant={id === t ? "primary" : "secondary"} dimColor={id !== t}
               onPress={() => update($, tab, () => id)} />
           ))}
         </Box>
         <Box flexDirection="row" flexWrap="wrap">
-          <Button key="lang" plain hotkey="l" label={`lang: ${lg}`}
-            onPress={() => update($, lang, (v) => LANGS[(LANGS.indexOf(v) + 1) % LANGS.length]!)} />
+          <Button key="english" plain hotkey="e" label={`English: ${showEn ? "on" : "off"}`}
+            onPress={() => update($, english, (v) => !v)} />
           <Text> </Text>
           <Button key="nikkud" plain hotkey="n" label={`nikkud: ${nk ? "on" : "off"}`}
             onPress={() => update($, nikkud, (v) => !v)} />
@@ -411,7 +364,7 @@ export const register: Register = (on) => {
         </Box>
         <Text dimColor>{"─".repeat(width)}</Text>
         {body()}
-        {d?.errors.length ? <Text dimColor>Issues: {d.errors.join("; ")}</Text> : null}
+        {issues.length ? <Text dimColor>Issues: {issues.join("; ")}</Text> : null}
       </Box>
     );
   });

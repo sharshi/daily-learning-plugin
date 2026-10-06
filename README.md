@@ -1,64 +1,109 @@
 # chitas-cc-mod
 
-A [Claude Code mod](https://docs.claude.com/en/docs/claude-code/overview) that shows the day's learning above the prompt — Chitas (Chumash aliyah, Tehillim, Tanya), Rambam, Hayom Yom, Daf Yomi — and a `/chitas` command that prints the full text with Rashi.
+A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) for the daily learning: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam (1 and 3 perakim), Hayom Yom and Daf Yomi.
+
+- **A band above the prompt** with today's Hebrew date and each section's reference. Click a row to open that section's text.
+- **A sidebar** (`/chitas-pane`) with the full Hebrew text, laid out right to left:
+  - Chumash with each verse's Rashi under it
+  - Tehillim on the Chabad monthly cycle
+  - The whole day's Tanya portion
+  - Rambam ×1 and Rambam ×3, one perek at a time, each halacha numbered **א. ב. ג.**
+  - Hayom Yom, when Sefaria has its text
+  - English is a toggle; nikkud is a toggle; te'amim are left out.
+- **`/chitas`** prints the day's text into the conversation, where you can ask Claude about it.
 
 ```
-✡ 21 Tishrei 5787 · Hoshana Raba   /chitas for text
-Chumash    V'Zot HaBerachah · Shishi (Deuteronomy 33:27-29)
-Tehillim   104-105  (day 21)
-Tanya      Igeret HaKodesh 27…
-Rambam ×3  Hilchot …
-Rambam ×1  Hilchot …
-Hayom Yom  Tishrei 21
-Daf Yomi   …
+✡ 25 Tishrei 5787 · Parashat Bereshit   /chitas-pane for text
+Chumash    Bereshit · Shlishi (Genesis 2:20-3:21)
+Tehillim   119:1-96  (day 25)
+Tanya      25 Tishrei
+Rambam ×3  Damages to Property 12-14
+Rambam ×1  Levirate Marriage and Release 2
+Hayom Yom  Tishrei 25
+Daf Yomi   Bekhorot 18
 ```
 
 ## Install
 
-Requires Claude Code ≥ 2.1.287 (mods), Node 18+ (global `fetch`), Python 3 for `/chitas`.
+Requires Claude Code 2.1.286 or later (mods) and `python3` (for the sidebar text and `/chitas`).
 
-```sh
-git clone https://github.com/sharshi/chitas-cc-mod
-claude --plugin-dir ./chitas-cc-mod
+In a Claude Code session:
+
+```
+/plugin marketplace add sharshi/chitas-cc-mod
+/plugin install chitas@chitas-cc-mod
 ```
 
-## Commands
+Or try it for one session from a clone: `claude --plugin-dir ./chitas-cc-mod`.
+
+## Use
 
 | Command | What it does |
 |---|---|
-| `/chitas` | Full Chumash aliyah + Rashi, Hayom Yom text; refs for the rest |
-| `/chitas --full` | Text for Tehillim, Tanya and Rambam too |
-| `/chitas --refs` | One-screen refs + links |
-| `/chitas --after-sunset` | Roll to the next Hebrew day |
-| `/chitas --date 2026-10-05` | Any date |
-| `/chitas --lang he` | `he`, `en` or `both` (default) |
-| `/chitas-toggle` | Collapse the panel to one line |
+| `/chitas-pane` | Open the sidebar |
+| `/chitas-toggle` | Collapse the band to one line, or expand it |
+| `/chitas` | Print the text in the conversation (`--refs`, `--full`, `--after-sunset`, `--date 2026-10-05`, `--lang he\|en\|both`) |
 
-`scripts/chitas.py` also works standalone (`--json` for machine output).
+In the sidebar:
+
+| Key | |
+|---|---|
+| `1`–`6` | Switch tab (sections with no text that day are left out) |
+| `e` | English on or off |
+| `n` | Nikkud on or off |
+| `r` | Reverse the Hebrew yourself, if the automatic choice is wrong for your terminal |
+| `j` / `k` | Next / previous perek in Rambam ×3 |
+| `↑` `↓` | Scroll |
+| `Esc` | Back to the prompt |
+
+### Setting: Hebrew font
+
+In `/config`, under chitas, **Hebrew font** can be set to **Shlomo SemiStam**: the mod installs the bundled font for your user and, in Ghostty, maps the Hebrew block to it (`font-codepoint-map = U+0590-U+05FF=Ezra SIL SR` in your Ghostty config; reload it with cmd+shift+,). Setting it back to **Terminal default** removes that line. Other terminals keep their own fonts.
+
+## Terminals
+
+Terminals draw Hebrew in different ways, so the sidebar lays it out per terminal:
+
+| Where | How it reads |
+|---|---|
+| **Ghostty**, and other terminals without right-to-left support | Best. The mod places every letter itself. |
+| **Claude Desktop** (Code tab) | The app lays out Hebrew itself, so the mod sends it in reading order. |
+| **macOS Terminal** | Best effort. Terminal reorders Hebrew on its own, and where Claude Code repaints part of the screen it can leave stray letters behind; nikkud on a line's first letter can break. Press `n` to drop nikkud, or use Ghostty. |
 
 ## Sources
 
 - Hebrew date: [hebcal.com](https://www.hebcal.com/home/developer-apis) converter API
-- Calendar refs and texts: [Sefaria API](https://developers.sefaria.org/) (`/api/calendars`, `/api/v3/texts`)
-- Tehillim follows the Chabad monthly cycle; 29/30-day months and the Psalm 119 split are handled
-- Every section links to the matching [chabad.org daily study](https://www.chabad.org/dailystudy) page as a fallback
+- Calendar and texts: [Sefaria API](https://developers.sefaria.org/) (`/api/calendars`, `/api/v3/texts`)
+- Tanya: Sefaria's calendar names only where each day's reading starts, so the mod reads up to where the next day's starts
+- Tehillim follows the Chabad monthly cycle, including 29-day months and the Psalm 119 split
+- Sections link to [chabad.org daily study](https://www.chabad.org/dailystudy) as a fallback
 
-Responses are cached per day in `~/.cache/chitas/`.
+`scripts/chitas.py` caches API responses in `~/.cache/chitas/` (delete it any time); the mod keeps only today's text, in its own store.
 
-## Layout
+## Develop
 
 ```
-.claude-plugin/plugin.json   manifest
-hooks/hooks.json             → ["./register.js"]
-hooks/register.js            AbovePrompt panel + /chitas-toggle
-commands/chitas.md           /chitas slash command
-scripts/chitas.py            fetch + render (stdlib only)
+.claude-plugin/        plugin.json (manifest, Hebrew font setting) and marketplace.json
+hooks/register.tsx     the mod: band, sidebar, commands, fetching
+hooks/data.ts          the day's data shaped for drawing (pure)
+hooks/hebrew.ts        Hebrew cleanup, mark order, wrapping and right-to-left ordering (pure)
+types/index.d.ts       the sidebar's $.state contract
+commands/chitas.md     /chitas
+scripts/chitas.py      fetches the day's refs and text (stdlib only; also works standalone, --json)
+scripts/install-font.sh  applies the Hebrew font setting
+fonts/                 Shlomo SemiStam and its license
+tests/                 claude plugin test suites, with one day's data as a fixture
 ```
 
-## Status
+```sh
+claude --plugin-dir .          # run it; edits apply on /reload-plugins
+claude plugin validate .       # what the mod hooks and calls, and anything the engine would refuse
+claude plugin test .           # the test suites
+npx -p typescript tsc -p .     # type-check (after one --plugin-dir run writes .claude-plugin/types)
+```
 
-Early. The mods API is still changing between Claude Code releases; run `/plugin-types` and adjust `register.js` if the `ui.render` or command event shapes differ on your version. Issues and PRs welcome.
+An installed copy (`/plugin install`) is a snapshot: bump `version` in `.claude-plugin/plugin.json` and run `claude plugin update chitas@chitas-cc-mod` to refresh it.
 
 ## License
 
-MIT
+The code is MIT; see [LICENSE](LICENSE). The bundled Shlomo SemiStam font is © SIL International and Shlomo Orbach under the SIL Open Font License 1.1; see [fonts/](fonts/).
