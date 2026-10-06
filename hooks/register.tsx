@@ -7,9 +7,10 @@ import type { EngineInterface as Host, Register, RenderChildren } from "claude-c
 
 import type { Day, Status, TabId } from "../types";
 import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, linesFor, todayKey, toDay } from "./data";
+import type { English } from "./data";
 import type { Brief } from "./data";
 import { cleanHe, cleanText, termVisual, visual, wrap } from "./hebrew";
-import { svgPage } from "./svg";
+import { svgPages } from "./svg";
 import type { EmbeddedFont, FontKey, Line } from "./svg";
 
 const PANE = "dl";
@@ -24,8 +25,7 @@ const TABS: [TabId, string][] = [
 const day = atom({ plugin: "dl", key: "day" } as const, null);
 const status = atom({ plugin: "dl", key: "status" } as const, null);
 const tab = atom({ plugin: "dl", key: "tab" } as const, "chumash");
-const english = atom({ plugin: "dl", key: "english" } as const, false);
-const nikkud = atom({ plugin: "dl", key: "nikkud" } as const, true);
+const pageAtom = atom({ plugin: "dl", key: "page" } as const, "read");
 const perek = atom({ plugin: "dl", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
@@ -138,6 +138,7 @@ const BAND_TAB: Record<string, TabId> = {
 
 async function openPane($: Host, t?: TabId) {
   if (t) await update($, tab, () => t);
+  await update($, pageAtom, () => "read");
   void ensureDay($);
   await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
 }
@@ -159,6 +160,34 @@ async function loadFont($: Host, choice: unknown) {
     embedded = typeof r === "string" ? null : { key: f.key, base64: r.base64 };
     $.ui.invalidate("ui.render");
   } catch {}
+}
+
+// ---- settings -------------------------------------------------------------
+// The sidebar's settings are the plugin's own (userConfig): they persist, show
+// in /config, and the settings page changes them with $.config.set, which
+// reloads the mod with the new values.
+const ENGLISH: Record<string, English> = { "Off": "off", "Staggered": "staggered", "Side by side": "side" };
+const SIZES: Record<string, number> = { "Small": 0.88, "Medium": 1, "Large": 1.18 };
+
+type Prefs = { font: string; english: English; nikkud: boolean; rashi: boolean; size: string };
+function prefsOf(o: Record<string, unknown>): Prefs {
+  return {
+    font: String(o.hebrew_font ?? "Frank Ruhl"),
+    english: ENGLISH[String(o.english)] ?? "off",
+    nikkud: o.nikkud !== false,
+    rashi: o.rashi !== false,
+    size: SIZES[String(o.text_size)] ? String(o.text_size) : "Medium",
+  };
+}
+
+// Change one setting as if in /config; say why when it can't be changed.
+async function setPref($: Host, field: string, value: string | boolean) {
+  try {
+    const r = await $.config.set({ key: `dl.${field}`, value });
+    if ("deny" in r && r.deny) $.ui.toast(`Daily Learning: couldn't change that setting: ${r.deny}`);
+  } catch (err: any) {
+    $.ui.toast(`Daily Learning: couldn't change that setting: ${err?.message || err}`);
+  }
 }
 
 // ---- ui -----------------------------------------------------------------
@@ -188,6 +217,7 @@ async function applyFont($: Host, choice: unknown) {
 }
 
 export const register: Register = (on, options) => {
+  const prefs = prefsOf(options as Record<string, unknown>);
   on("session.start", async ($, e, next) => {
     void applyFont($, options.hebrew_font);
     void loadFont($, options.hebrew_font);
@@ -243,15 +273,16 @@ export const register: Register = (on, options) => {
   // /dl opens the sidebar and fetches the text in the background.
   on("command.run", { command: "dl" }, async ($) => {
     await openPane($);
-    return { text: "Opened the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Opened the sidebar. Keys: number keys for tabs · e English · n nikkud · s settings · j/k perek or amud · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const Svg = e.surface === "desktop" ? $.ui.resolve(e).Svg : null;
-    const [d, st, t, showEn, nk, pk] = await Promise.all([
-      read($, day), read($, status), read($, tab), read($, english), read($, nikkud), read($, perek),
+    const [d, st, t, pk, pg] = await Promise.all([
+      read($, day), read($, status), read($, tab), read($, perek), read($, pageAtom),
     ]);
+    const nk = prefs.nikkud;
     // Load on sight: a render never writes state, so start it on a timer.
     if ((d?.key !== todayKey() || d.v !== DAY_V) && st?.phase !== "error") $.clock.after(0, () => void ensureDay($));
     const width = Math.max(20, e.props.bodyColumns - 1);
@@ -269,10 +300,10 @@ export const register: Register = (on, options) => {
     // A Hebrew paragraph, wrapped here and right-aligned line by line, each line
     // ordered for the surface. `label` (a halacha's "א.") leads the paragraph
     // in bold, at the right end of its first line.
-    const he = (s: string, k: string, color?: "magenta", label?: string) => {
+    const he = (s: string, k: string, color?: "magenta", label?: string, w = width) => {
       const txt = cleanHe(s, nk);
       if (!txt) return null;
-      const lines = wrap(label ? `${label} ${txt}` : txt, width);
+      const lines = wrap(label ? `${label} ${txt}` : txt, w);
       return (
         <Box key={k} flexDirection="column" alignItems="flex-end">
           {lines.map((ws, li) =>
@@ -302,27 +333,69 @@ export const register: Register = (on, options) => {
       </Box>
     );
 
-    // A line of the body drawn as terminal text.
+    // A line of the body drawn as terminal text; a pair puts the English in
+    // the left half and the Hebrew in the right.
+    const half = Math.max(10, Math.floor((width - 2) / 2));
     const draw = (l: Line, k: string) =>
       l.kind === "gap" ? <Text key={k}> </Text>
         : l.kind === "heading" ? heading(l.text, k)
         : l.kind === "he" ? he(l.text, k, l.rashi ? "magenta" : undefined, l.label)
-        : en(l.text, k, l.rashi ? "magenta" : undefined, l.label);
+        : l.kind === "en" ? en(l.text, k, l.rashi ? "magenta" : undefined, l.label)
+        : (
+          <Box key={k} flexDirection="row" justifyContent="space-between">
+            <Box width={half} flexDirection="column">{en(l.en, `${k}e`, l.rashi ? "magenta" : undefined, l.enLabel)}</Box>
+            <Box width={half} flexDirection="column">{he(l.he, `${k}h`, l.rashi ? "magenta" : undefined, l.label, half)}</Box>
+          </Box>
+        );
 
     // The body's lines in the Desktop app: one SVG with the Hebrew font in it,
     // or text when the font isn't at hand or the page is too big for an SVG.
     const page = (lines: Line[], k: string) => {
       if (e.surface === "desktop" && embedded) {
-        const svg = svgPage(lines.map((l) =>
+        // About 7.8 CSS pixels a column, so the page draws near its real size
+        // and its text sits with the app's own.
+        const svgs = svgPages(lines.map((l) =>
           l.kind === "he" ? { ...l, text: cleanHe(l.text, nk) }
             : l.kind === "heading" ? { ...l, text: cleanHe(l.text, nk) }
-            : l.kind === "en" ? { ...l, text: cleanText(l.text) } : l), embedded);
-        if (svg && Svg) return [<Svg key={`${k}svg`} source={svg} alt="The day's text in Hebrew" />];
+            : l.kind === "en" ? { ...l, text: cleanText(l.text) }
+            : l.kind === "pair" ? { ...l, he: cleanHe(l.he, nk), en: cleanText(l.en) } : l),
+          embedded, { width: (width + 1) * 7.8, scale: SIZES[prefs.size]! });
+        if (svgs && Svg) return svgs.map((src, i) => <Svg key={`${k}svg${i}`} source={src} alt="The day's text in Hebrew" />);
       }
       return lines.map((l, i) => draw(l, `${k}l${i}`));
     };
 
+    // The settings page: each setting a row of choices; a press writes it.
+    const settings = () => {
+      const row = (field: string, title: string, choices: [string, string | boolean][], current: string | boolean, hint: string) => (
+        <Box key={`set-${field}`} flexDirection="column" marginBottom={1}>
+          <Text bold>{title}</Text>
+          <Box flexDirection="row" flexWrap="wrap">
+            {choices.map(([label, value]) => (
+              <Button key={`set-${field}-${label.replace(/\W+/g, "-").toLowerCase()}`} label={label}
+                variant={value === current ? "primary" : "secondary"} dimColor={value !== current}
+                onPress={() => value === current ? undefined : setPref($, field, value)} />
+            ))}
+          </Box>
+          <Text dimColor>{hint}</Text>
+        </Box>
+      );
+      const onOff: [string, boolean][] = [["On", true], ["Off", false]];
+      return [
+        row("hebrew_font", "Hebrew font", [["Frank Ruhl", "Frank Ruhl"], ["Shlomo", "Shlomo"], ["System", "System"]], prefs.font,
+          "Drawn in the Desktop app; installed and mapped in Ghostty. System leaves fonts alone."),
+        row("english", "English", [["Off", "Off"], ["Staggered", "Staggered"], ["Side by side", "Side by side"]],
+          Object.keys(ENGLISH).find((k) => ENGLISH[k] === prefs.english)!, "Staggered: under each paragraph. Side by side: English left, Hebrew right."),
+        row("nikkud", "Nikkud", onOff, prefs.nikkud, "The Hebrew with or without vowels."),
+        row("rashi", "Rashi", onOff, prefs.rashi, "Under each verse of Chumash and each passage of the Daf."),
+        row("text_size", "Text size", [["Small", "Small"], ["Medium", "Medium"], ["Large", "Large"]], prefs.size,
+          e.surface === "terminal" ? "For the Desktop app; a terminal uses its own size." : "The sidebar's text in the Desktop app."),
+        <Button key="settings-done" label="‹ Back to the text" onPress={() => update($, pageAtom, () => "read")} />,
+      ];
+    };
+
     const body = () => {
+      if (pg === "settings") return settings();
       if (!d || d.key !== todayKey()) {
         if (st?.phase === "error") return <Text color="red">Could not load: {st.error}</Text>;
         return <Text dimColor>Loading today's text… (the first fetch takes a little while)</Text>;
@@ -359,7 +432,7 @@ export const register: Register = (on, options) => {
             {(empty ? p.chabad || p.link : p.link) && <Text dimColor>{empty ? p.chabad || p.link : p.link}</Text>}
             <Text> </Text>
             {nav("top")}
-            {page(linesFor(p, at, showEn), `p${pi}`)}
+            {page(linesFor(p, at, { english: prefs.english, rashi: prefs.rashi }), `p${pi}`)}
             {nav("end")}
           </Box>
         );
@@ -382,11 +455,20 @@ export const register: Register = (on, options) => {
       return rows;
     };
     const tabRows = pack(shownTabs(d).map((x, i) => [...x, i] as const), ([, label]) => label.length + 4);
-    const toggles = [
-      <Button key="english" plain hotkey="e" label={`English: ${showEn ? "on" : "off"}`} onPress={() => update($, english, (v) => !v)} />,
-      <Button key="nikkud" plain hotkey="n" label={`nikkud: ${nk ? "on" : "off"}`} onPress={() => update($, nikkud, (v) => !v)} />,
+    // e steps English through off, staggered and side by side; n turns nikkud
+    // on or off; s opens the settings page (or goes back to the text).
+    const englishLabel = { off: "off", staggered: "staggered", side: "side by side" }[prefs.english];
+    const nextEnglish = { off: "Staggered", staggered: "Side by side", side: "Off" }[prefs.english];
+    const toggleItems: [string, () => unknown, string][] = [
+      ["english", () => setPref($, "english", nextEnglish), `English: ${englishLabel}`],
+      ["nikkud", () => setPref($, "nikkud", !nk), `nikkud: ${nk ? "on" : "off"}`],
+      ["settings", () => update($, pageAtom, (v) => v === "settings" ? "read" : "settings"), pg === "settings" ? "‹ text" : "⚙ settings"],
     ];
-    const toggleRows = pack(toggles.map((b, i) => [b, i === 0 ? 17 + 2 : 14 + 2] as const), ([, w]) => w);
+    const hotkeys: Record<string, string> = { english: "e", nikkud: "n", settings: "s" };
+    const toggles = toggleItems.map(([key, press, label]) => [
+      <Button key={key} plain hotkey={hotkeys[key]} label={label} onPress={press} />, label.length + 5,
+    ] as const);
+    const toggleRows = pack(toggles, ([, w]) => w);
     const header = [
       <Box key="date" flexDirection="row" justifyContent="space-between">
         <Text color="cyan" bold wrap="truncate">✡ {d?.title ?? "Daily Learning"}</Text>
@@ -397,7 +479,7 @@ export const register: Register = (on, options) => {
           {row.map(([id, label, i]) => (
             <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)}
               variant={id === t ? "primary" : "secondary"} dimColor={id !== t}
-              onPress={() => update($, tab, () => id)} />
+              onPress={async () => { await update($, tab, () => id); await update($, pageAtom, () => "read"); }} />
           ))}
         </Box>
       )),

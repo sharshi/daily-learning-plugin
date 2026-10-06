@@ -150,24 +150,40 @@ export function toDay(key: string, j: any): Day {
   };
 }
 
+// How the body shows English and Rashi (the sidebar's settings).
+export type English = "off" | "staggered" | "side";
+export type LineOptions = { english: English; rashi: boolean };
+
 // What a part draws, line by line: for a sectioned part, section `at` under
 // its heading; otherwise verse by verse. Each paragraph is followed by its
-// English (when on and it lines up) and its Rashi.
-export function linesFor(p: Part, at: number, showEn: boolean): Line[] {
+// English (staggered: under it; side: beside it) and its Rashi.
+export function linesFor(p: Part, at: number, opt: LineOptions): Line[] {
   const out: Line[] = [];
+  const showEn = opt.english !== "off";
   const para = (he: string[], en: string[], rashi: string[][] | undefined, rashiEn: string[][] | undefined, numbered: boolean) => {
     const paired = he.length === en.length;
-    const r = rashi && rashi.length === he.length ? rashi : null;
+    const r = opt.rashi && rashi && rashi.length === he.length ? rashi : null;
     he.forEach((h, i) => {
-      out.push({ kind: "he", text: h, ...(numbered ? { label: `${gematria(i + 1)}.` } : {}) });
-      if (showEn && paired) out.push({ kind: "en", text: en[i]!, ...(numbered ? { label: `${i + 1}.` } : {}) });
-      r?.[i]?.forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
-      if (showEn && r) rashiEn?.[i]?.forEach((c) => out.push({ kind: "en", text: c, rashi: true }));
+      const label = numbered ? `${gematria(i + 1)}.` : undefined;
+      const enLabel = numbered ? `${i + 1}.` : undefined;
+      if (opt.english === "side" && paired) {
+        out.push({ kind: "pair", he: h, en: en[i]!, ...(label ? { label, enLabel } : {}) });
+      } else {
+        out.push({ kind: "he", text: h, ...(label ? { label } : {}) });
+        if (showEn && paired) out.push({ kind: "en", text: en[i]!, ...(enLabel ? { label: enLabel } : {}) });
+      }
+      const rh = r?.[i] ?? [], re = showEn && r ? rashiEn?.[i] ?? [] : [];
+      if (opt.english === "side" && rh.length && rh.length === re.length) {
+        rh.forEach((c, j) => out.push({ kind: "pair", he: c, en: re[j]!, rashi: true }));
+      } else {
+        rh.forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
+        re.forEach((c) => out.push({ kind: "en", text: c, rashi: true }));
+      }
       out.push({ kind: "gap" });
     });
     if (showEn && !paired) en.forEach((x) => out.push({ kind: "en", text: x }, { kind: "gap" }));
     // Rashi that did not line up with the paragraphs still shows, after them.
-    if (rashi && !r) rashi.flat().forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
+    if (opt.rashi && rashi && !r) rashi.flat().forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
   };
   if (p.sections?.length) {
     const s = p.sections[Math.min(Math.max(at, 0), p.sections.length - 1)]!;

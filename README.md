@@ -12,7 +12,8 @@
   - Rambam ×1 and Rambam ×3, one perek at a time, each halacha numbered **א. ב. ג.**
   - Daf Yomi, one amud at a time, each passage with its Rashi
   - Hayom Yom, when Sefaria has its text
-  - English is a toggle, Rashi's included (Rosenbaum & Silbermann's translation; Sefaria has no English for Rashi on the Gemara); nikkud is a toggle; te'amim are left out.
+  - English off, **staggered** (under each paragraph) or **side by side** (English left, Hebrew right), Rashi's included (Rosenbaum & Silbermann's translation; Sefaria has no English for Rashi on the Gemara); nikkud and Rashi can be turned off; te'amim are left out.
+  - A **⚙ settings** page for font, English, nikkud, Rashi and text size.
   - In the terminal, the date, tabs and toggles stay at the top as the text scrolls.
 - **`/dl:text`** prints the day's text into the conversation, where you can ask Claude about it.
 
@@ -47,19 +48,26 @@ In the sidebar:
 | Key | |
 |---|---|
 | `1`–`7` | Switch tab (sections with no text that day are left out) |
-| `e` | English on or off |
+| `e` | English: off → staggered → side by side |
 | `n` | Nikkud on or off |
+| `s` | Settings page, or back to the text |
 | `j` / `k` | Next / previous perek (Rambam ×3) or amud (Daf Yomi) |
 | `↑` `↓` | Scroll |
 | `Esc` | Back to the prompt |
 
-### Setting: Hebrew font
+### Settings
 
-In `/config`, under dl, **Hebrew font** picks the font the sidebar's Hebrew is drawn in: **Frank Ruhl** (Frank Ruhl Libre, the default) or **Shlomo**, both bundled, both with nikkud. **System** leaves every font alone.
+The sidebar's **⚙ settings** page (`s`) sets these; they're also in `/config` under dl, and they last across sessions.
 
-- **Desktop app:** the chosen font is embedded in the sidebar's pages.
-- **Ghostty:** the font is installed for your user and Ghostty's Hebrew is mapped to it, with one marked line in your Ghostty config (reload it with cmd+shift+,). A Hebrew mapping you wrote yourself is left alone. Choosing **System** removes the mod's line.
-- **macOS Terminal** has no way to use a separate Hebrew font, so it keeps its own.
+| Setting | Choices |
+|---|---|
+| Hebrew font | **Frank Ruhl** (Frank Ruhl Libre, the default) or **Shlomo**, both bundled with nikkud; **System** leaves every font alone |
+| English | Off, Staggered, Side by side |
+| Nikkud | On, Off |
+| Rashi | On, Off |
+| Text size | Small, Medium, Large (the Desktop app; a terminal uses its own size) |
+
+The Hebrew font is embedded in the Desktop app's pages. For **Ghostty** it is installed for your user and Ghostty's Hebrew is mapped to it, with one marked line in your Ghostty config (reload it with cmd+shift+,); a Hebrew mapping you wrote yourself is left alone, and **System** removes the mod's line. **macOS Terminal** has no way to use a separate Hebrew font, so it keeps its own.
 
 ## Terminals
 

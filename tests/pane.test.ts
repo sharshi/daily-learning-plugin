@@ -11,7 +11,10 @@ declare const setTimeout: (fn: (v?: unknown) => void, ms: number) => unknown;
 const settle = () => new Promise((r) => setTimeout(r, 500));
 
 // What the engine does beneath the mod: the script, the store, the pane, the band's fetches.
+const configSets: { key: string; value: unknown }[] = [];
 function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }, term = "ghostty", font?: string) {
+  configSets.length = 0;
+  on("config.set", async (_$, e: any) => { configSets.push({ key: e.key, value: e.value }); return { value: e.value } as never; });
   if (font) on("fs.read", async () => ({ value: { base64: font } }) as never);
   on("env.get", async (_$, e: any) => ({ value: e.name === "TERM_PROGRAM" ? term : undefined }) as never);
   const store = new Map<string, unknown>();
@@ -87,13 +90,46 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
   expect(r21).toBeGreaterThan(v21);
   expect(v22).toBeGreaterThan(r21);
   expect(t.some((x) => x.includes("deep sleep"))).toBe(false);
+  // e writes the English setting, which reloads the mod with it.
   await ui.press({ key: "english" } as never);
-  t = await texts();
-  expect(t.some((x) => x.includes("deep sleep"))).toBe(true);
-  // Rashi's English (Rosenbaum & Silbermann) follows his Hebrew on 2:21.
+  expect(configSets).toContainEqual({ key: "dl.english", value: "Staggered" });
+});
+
+test("English staggered: each verse, then its English, then Rashi and Rashi's English", { timeoutMs: 20000, options: { english: "Staggered" } }, async ($, on) => {
+  host(on, undefined, "Apple_Terminal");
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
+  const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
+  const t = (await ui.findAll({ type: "Text" })).map((x) => x.text);
+  const v21 = t.findIndex((x) => bare(x).startsWith("ויפל"));
+  const sleep = t.findIndex((x) => x.includes("deep sleep"));
+  const r21 = t.findIndex((x) => bare(x).startsWith("מצלעותיו"));
   const ribs = t.findIndex((x) => x.includes("OF HIS RIBS"));
+  expect(v21).toBeGreaterThan(-1);
+  expect(sleep).toBeGreaterThan(v21);
+  expect(r21).toBeGreaterThan(sleep);
   expect(ribs).toBeGreaterThan(r21);
   expect(ribs).toBeLessThan(t.findIndex((x) => bare(x).startsWith("ויבן")));
+});
+
+test("English side by side: English in the left half, Hebrew in the right", { timeoutMs: 20000, options: { english: "Side by side" } }, async ($, on) => {
+  host(on);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  const drawn = JSON.stringify(await ui.drawn());
+  expect(drawn).toContain("deep sleep");
+  // A pair is a row of two half-width columns: English first, Hebrew second.
+  const rows = (await ui.findAll({ type: "Box" })).filter((b) => b.props.flexDirection === "row" && b.props.justifyContent === "space-between" && JSON.stringify(b.children).includes("deep sleep"));
+  // (The verse, and Rashi on it, whose English says "deep sleep" too.)
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    const [left, right] = row.children as { props: { width: number } }[];
+    expect(left!.props.width).toBe(right!.props.width);
+    expect(JSON.stringify(left)).toContain("deep sleep");
+    expect(JSON.stringify(right)).not.toContain("deep sleep");
+  }
 });
 
 test("Rambam ×3 has its text", { timeoutMs: 20000 }, async ($, on) => {
@@ -302,9 +338,6 @@ test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the 
   const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
   expect(rashi.length).toBeGreaterThan(5);
   expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(false);
-  await ui.press({ key: "english" } as never);
-  t = await texts();
-  expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(true);
   await ui.press({ key: "next-end" } as never);
   t = await texts();
   expect(t.join("\n")).toContain("amud 2 of 2");
@@ -324,7 +357,7 @@ test("Desktop: the body is one SVG with the chosen font embedded, Hebrew in read
   const src = String(svgs[0]!.props.source);
   expect(src).toContain("data:font/woff;base64,d09GRgABAAA=");
   expect(src.length).toBeLessThanOrEqual(131072);
-  expect(src).toContain('direction="rtl"');
+  expect(src).toContain("direction:rtl");
   expect(src).toContain('<tspan class="b">\u05D0.</tspan>'); // halacha א. in bold
   expect(src.replace(/[\u0591-\u05C7]/g, "")).toContain("\u05D4\u05D7\u05D5\u05E4\u05E8 \u05D1\u05D5\u05E8"); // החופר בור, as written
   // Tabs and perek buttons stay outside the picture.
@@ -343,4 +376,47 @@ test("terminal: the header stays at the top of the window as the sidebar scrolls
   expect((await ui.find({ key: "blank" }))?.props.top).toBe(12);
   await ui.press({ key: "tab-tanya" } as never);
   expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei");
+});
+
+test("Daf Yomi with English: each passage's English under it", { timeoutMs: 20000, options: { english: "Staggered" } }, async ($, on) => {
+  host(on, undefined, "Apple_Terminal");
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "tab-daf" } as never);
+  const t = (await ui.findAll({ type: "Text" })).map((x) => x.text);
+  expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(true);
+});
+
+test("settings page: rows of choices that write the plugin's settings", { timeoutMs: 20000, options: { hebrew_font: "Shlomo", rashi: false } }, async ($, on) => {
+  host(on);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "settings" } as never);
+  // The current values are marked.
+  expect((await ui.find({ key: "set-hebrew_font-shlomo" }))?.props.variant).toBe("primary");
+  expect((await ui.find({ key: "set-rashi-off" }))?.props.variant).toBe("primary");
+  expect((await ui.find({ key: "set-english-off" }))?.props.variant).toBe("primary");
+  await ui.press({ key: "set-english-side-by-side" } as never);
+  await ui.press({ key: "set-hebrew_font-frank-ruhl" } as never);
+  await ui.press({ key: "set-nikkud-off" } as never);
+  expect(configSets).toEqual([
+    { key: "dl.english", value: "Side by side" },
+    { key: "dl.hebrew_font", value: "Frank Ruhl" },
+    { key: "dl.nikkud", value: false },
+  ]);
+  // A tab goes back to the text.
+  await ui.press({ key: "tab-tanya" } as never);
+  expect(await ui.find({ key: "set-english-off" })).toBeUndefined();
+  expect(JSON.stringify(await ui.drawn())).toContain("Tanya · 25 Tishrei");
+});
+
+test("rashi off: the Chumash shows no Rashi", { timeoutMs: 20000, options: { rashi: false } }, async ($, on) => {
+  host(on, undefined, "Apple_Terminal");
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
+  expect(rashi.length).toBe(0);
 });

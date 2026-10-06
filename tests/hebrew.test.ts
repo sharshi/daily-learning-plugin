@@ -2,7 +2,7 @@ import { expect, test } from "claude-code/testing";
 
 import { briefFrom, hebrewDate } from "../hooks/data";
 import { cleanHe, cleanText, gematria, markOrder, termVisual, visual, wrap } from "../hooks/hebrew";
-import { SVG_LIMIT, svgPage } from "../hooks/svg";
+import { SVG_LIMIT, svgPage, svgPages } from "../hooks/svg";
 
 const bare = (s: string) => s.replace(/[\u0591-\u05C7]/g, "");
 
@@ -72,7 +72,21 @@ test("svgPage: right-to-left lines, labels in bold, text escaped, null past the 
   ], { key: "shlomo", base64: "Zm9udA==" })!;
   expect(svg).toContain("data:font/woff;base64,Zm9udA==");
   expect(svg).toContain('<tspan class="b">\u05D0.</tspan> \u05D0 &amp; \u05D1');
+  expect(svg).toContain(".h,.t{font-family:DLHebrew");
   expect(svg).toContain(">a &lt;b&gt; c<");
-  expect(svg.match(/direction="rtl"/g)?.length).toBe(2);
+  expect(svg).toContain("direction:rtl");
   expect(svgPage([{ kind: "he", text: "\u05D0" }], { key: "frank", base64: "A".repeat(SVG_LIMIT) })).toBe(null);
+});
+
+test("svgPages: a page too big for one SVG splits between paragraphs, each under the limit", () => {
+  const para = "\u05D0\u05D1\u05D2 ".repeat(400);
+  const lines = Array.from({ length: 40 }, () => [{ kind: "he" as const, text: para }, { kind: "gap" as const }]).flat();
+  const pages = svgPages(lines, { key: "frank", base64: "A".repeat(60000) })!;
+  expect(pages.length).toBeGreaterThan(1);
+  for (const p of pages) {
+    expect(p.length).toBeLessThanOrEqual(SVG_LIMIT);
+    expect(p).toContain("data:font/woff;base64,");
+  }
+  // One paragraph too big on its own can't be drawn as SVG.
+  expect(svgPages([{ kind: "he", text: "\u05D0 ".repeat(70000) }], { key: "frank", base64: "A" })).toBe(null);
 });

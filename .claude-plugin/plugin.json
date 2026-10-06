@@ -1,7 +1,7 @@
 {
   "name": "dl",
   "displayName": "Daily Learning",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi) on one line above the prompt, and the full Hebrew text in a sidebar.",
   "author": {
     "name": "Shersheial",
@@ -34,6 +34,40 @@
         "System"
       ],
       "default": "Frank Ruhl"
+    },
+    "english": {
+      "type": "string",
+      "title": "English",
+      "description": "Show the English translation: Off, Staggered (under each paragraph) or Side by side (English left, Hebrew right).",
+      "options": [
+        "Off",
+        "Staggered",
+        "Side by side"
+      ],
+      "default": "Off"
+    },
+    "nikkud": {
+      "type": "boolean",
+      "title": "Nikkud",
+      "description": "Show the Hebrew with vowels.",
+      "default": true
+    },
+    "rashi": {
+      "type": "boolean",
+      "title": "Rashi",
+      "description": "Show Rashi under each verse (Chumash) or passage (Daf Yomi).",
+      "default": true
+    },
+    "text_size": {
+      "type": "string",
+      "title": "Text size",
+      "description": "The sidebar's text size in the Desktop app (a terminal uses its own).",
+      "options": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "default": "Medium"
     }
   }
 }

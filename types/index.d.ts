@@ -35,8 +35,8 @@ declare module "claude-code" {
       day: Day | null;
       status: Status | null;
       tab: TabId;
-      english: boolean;
-      nikkud: boolean;
+      // Which page the sidebar shows: the day's text, or its settings.
+      page: "read" | "settings";
       // Which section (perek, amud) each sectioned tab shows, for which day.
       perek: { key: string; at: Partial<Record<TabId, number>> } | null;
     };
