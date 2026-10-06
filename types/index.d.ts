@@ -1,15 +1,22 @@
-// State contract for the chitas mod: the values the sidebar pane draws from.
+// State contract for the dl (Daily Learning) mod: the values the sidebar pane draws from.
 
-export type TabId = "chumash" | "tehillim" | "tanya" | "rambam1" | "rambam3" | "hayom";
+export type TabId = "chumash" | "tehillim" | "tanya" | "rambam1" | "rambam3" | "hayom" | "daf";
 
 // One block of text in a tab: a ref, its links, and parallel he/en paragraphs.
 // `rashi` holds Rashi's comments per verse, aligned with `he` (Chumash only).
 export type Part = {
   title: string; link?: string; chabad?: string; he: string[]; en: string[];
   rashi?: { he: string[][]; en: string[][] };
-  // Rambam: the halachot grouped by chapter, `n` the chapter's number.
-  chapters?: { n: number; he: string[]; en: string[] }[];
+  // A reading read one section at a time (Rambam's perakim, the daf's amudim):
+  // `unit` names them in the next/previous buttons, `numbered` leads each
+  // paragraph with its number (a halacha's א.), and `rashi` is per paragraph.
+  sections?: Section[];
+  unit?: "perek" | "amud";
+  numbered?: boolean;
 };
+
+// One section: `name` heads it (פרק יב, דף יח.), `short` names it in a button (יב, יח.).
+export type Section = { name: string; short: string; he: string[]; en: string[]; rashi?: string[][] };
 
 export type Day = {
   v: number; // shape version: a cached Day of another version is fetched again
@@ -24,14 +31,14 @@ export type Status = { key: string; phase: "loading" | "ready" | "error"; error?
 
 declare module "claude-code" {
   interface PluginState {
-    chitas: {
+    dl: {
       day: Day | null;
       status: Status | null;
       tab: TabId;
       english: boolean;
       nikkud: boolean;
-      // Which perek of a multi-chapter Rambam reading is showing, for which day.
-      perek: { key: string; i: number } | null;
+      // Which section (perek, amud) each sectioned tab shows, for which day.
+      perek: { key: string; at: Partial<Record<TabId, number>> } | null;
     };
   }
 }

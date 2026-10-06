@@ -1,13 +1,13 @@
 {
-  "name": "chitas-cc-mod",
-  "description": "The chitas mod for Claude Code: daily Chitas, Rambam, Hayom Yom and Daf Yomi.",
+  "name": "daily-learning",
+  "description": "Daily Learning for Claude Code: Chitas, Rambam, Hayom Yom and Daf Yomi.",
   "owner": {
     "name": "Shersheial",
     "url": "https://github.com/sharshi"
   },
   "plugins": [
     {
-      "name": "chitas",
+      "name": "dl",
       "source": "./",
       "description": "Today's Chitas, Rambam, Hayom Yom and Daf Yomi above the prompt, with the full text in a sidebar."
     }

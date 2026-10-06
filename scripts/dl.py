@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""chitas.py — today's Chitas + daily learning, from the terminal.
+"""dl.py — today's daily learning (Chitas, Rambam, Hayom Yom, Daf Yomi), from the terminal.
 
 Chumash (daily aliyah) with Rashi, Tehillim (monthly cycle), Tanya Yomi,
 Rambam (1 or 3 perakim), Hayom Yom, Daf Yomi. Stdlib only. Sources:
 hebcal.com (Hebrew date) and sefaria.org (calendars + texts).
 
 Usage:
-  chitas.py                      # today, refs + Chumash/Rashi text
-  chitas.py --date 2026-10-05    # a specific Gregorian date
-  chitas.py --after-sunset       # roll to the next Hebrew day
-  chitas.py --refs               # refs + links only, no text
-  chitas.py --full               # pull text for every section, not just Chumash
-  chitas.py --no-rashi           # skip Rashi
-  chitas.py --lang he|en|both    # default: both
-  chitas.py --json               # machine-readable, for Claude to summarize
-  chitas.py --no-cache
+  dl.py                      # today, refs + Chumash/Rashi text
+  dl.py --date 2026-10-05    # a specific Gregorian date
+  dl.py --after-sunset       # roll to the next Hebrew day
+  dl.py --refs               # refs + links only, no text
+  dl.py --full               # pull text for every section, not just Chumash
+  dl.py --no-rashi           # skip Rashi
+  dl.py --lang he|en|both    # default: both
+  dl.py --json               # machine-readable, for Claude to summarize
+  dl.py --no-cache
 """
 import argparse
 import datetime as dt
@@ -26,8 +26,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-UA = "chitas-cli/1.0 (+claude-code skill)"
-CACHE_DIR = os.path.expanduser("~/.cache/chitas")
+UA = "daily-learning/1.0 (+https://github.com/sharshi/daily-learning)"
+CACHE_DIR = os.path.expanduser("~/.cache/daily-learning")
 TIMEOUT = 20
 
 # Chabad monthly Tehillim cycle, by Hebrew day of month.
@@ -173,6 +173,40 @@ def by_verse(x):
     return [[strip_html(c) for c in flatten(v)] for v in x]
 
 
+def daf_text(ref, lang, use_cache):
+    """A daf as its amudim: [{"amud": "18a", "he": [...], "en": [...],
+    "rashi_he": [[...], ...]}], Rashi grouped by the passage it comments on."""
+    versions = {"he": "version=hebrew", "en": "version=english",
+                "both": "version=hebrew&version=english"}[lang]
+    d = get_json("https://www.sefaria.org/api/v3/texts/" + urllib.parse.quote(ref)
+                 + f"?{versions}&return_format=text_only", use_cache)
+    r = get_json("https://www.sefaria.org/api/v3/texts/" + urllib.parse.quote("Rashi on " + ref)
+                 + "?version=hebrew&return_format=text_only", use_cache)
+
+    def amudim(text):  # one list per amud, whether the ref spans one or two
+        if not isinstance(text, list) or not text:
+            return []
+        return text if all(isinstance(a, list) for a in text) else [text]
+
+    by = {"he": [], "en": []}
+    for v in d.get("versions", []):
+        by["he" if v.get("language") == "he" else "en"] = amudim(v.get("text", []))
+    rashi = amudim(((r.get("versions") or [{}])[0]).get("text", []))
+    first = (d.get("sections") or [""])[0]
+    last = (d.get("toSections") or [first])[0]
+    names = [first, last] if first != last else [first]
+    out = []
+    for i in range(max(len(by["he"]), len(by["en"]))):
+        he = by["he"][i] if i < len(by["he"]) else []
+        out.append({
+            "amud": names[i] if i < len(names) else "",
+            "he": [strip_html(x) for x in flatten(he)] if he and all(isinstance(x, str) for x in he) else flatten(he),
+            "en": flatten(by["en"][i]) if i < len(by["en"]) else [],
+            "rashi_he": by_verse(rashi[i]) if i < len(rashi) else [],
+        })
+    return out
+
+
 def flatten(x):
     if isinstance(x, str):
         return [strip_html(x)] if x.strip() else []
@@ -300,11 +334,16 @@ def build(g, args):
             sec["text"] = txt
         S["hayom_yom"] = sec
 
-    # --- Daf Yomi (bonus) ---
+    # --- Daf Yomi: both amudim, each passage with its Rashi ---
     daf = cal.get("Daf Yomi")
     if daf:
         S["daf_yomi"] = {"ref": daf["ref"], "display": daf["displayValue"]["en"],
                          "link": sefaria_link(daf["ref"])}
+        if args.full:
+            amudim, err = safe(daf_text, daf["ref"], args.lang, use_cache)
+            if err:
+                errors.append(f"daf yomi text: {err}")
+            S["daf_yomi"]["amudim"] = amudim or []
 
     brief["errors"] = errors
     return brief
@@ -394,6 +433,10 @@ def render(brief, args):
     d = S.get("daf_yomi")
     if d:
         L.append(f"- Daf Yomi: {d['display']}")
+        L.append(f"  {d['link']}")
+        for a in d.get("amudim") or []:
+            L.append(f"  [{a['amud']}]")
+            L.extend(render_text(a, args.lang))
 
     if brief["errors"]:
         L.append("")

@@ -12,5 +12,8 @@ Cantillation/Shlomo Orbach (OFL)/ShlomoSemiStam.ttf).
 The font's internal family name is **Ezra SIL SR** (inherited from its parent),
 so that is the name a terminal config refers to it by, not "Shlomo SemiStam".
 
-`/chitas-font` runs `scripts/install-font.sh`, which copies the font into your
-user fonts folder and, for Ghostty, maps the Hebrew block to it.
+The mod's "Hebrew font" setting runs `scripts/install-font.sh`, which copies
+the font into your user fonts folder and, for Ghostty, maps the Hebrew block
+to it. `ShlomoSemiStam.woff` is the same font repackaged as WOFF (tables
+compressed, font data unchanged) by `scripts/make-woff.py`, for the Desktop
+app, which draws the sidebar's Hebrew as SVG with this font embedded.

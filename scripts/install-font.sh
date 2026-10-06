@@ -1,5 +1,5 @@
 #!/bin/sh
-# The chitas mod's "Hebrew font" setting, applied: install the bundled
+# The dl (Daily Learning) mod's "Hebrew font" setting, applied: install the bundled
 # Shlomo SemiStam font for this user and map Ghostty's Hebrew block to it,
 # or with --remove take the Ghostty line back out. Safe to run every session:
 # it changes nothing that is already in place, and prints a line starting
@@ -9,7 +9,8 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 font="$root/fonts/ShlomoSemiStam.ttf"
 family="Ezra SIL SR" # the font's internal family name, not "Shlomo SemiStam"
-mark="# Hebrew in Shlomo SemiStam (chitas mod)"
+mark="# Hebrew in Shlomo SemiStam (dl mod)"
+old_mark="# Hebrew in Shlomo SemiStam (chitas mod)" # written by versions before the rename
 line="font-codepoint-map = U+0590-U+05FF=$family"
 
 # Ghostty reads $XDG_CONFIG_HOME/ghostty/config, and on macOS also
@@ -21,8 +22,8 @@ if [ ! -f "$cfg" ] && [ -f "$mac" ]; then cfg="$mac"; fi
 
 if [ "${1:-}" = "--remove" ]; then
   if [ -f "$cfg" ] && grep -qxF "$line" "$cfg"; then
-    tmp="$cfg.chitas.$$"
-    grep -vxF -e "$mark" -e "$line" "$cfg" > "$tmp" || true
+    tmp="$cfg.dl.$$"
+    grep -vxF -e "$mark" -e "$old_mark" -e "$line" "$cfg" > "$tmp" || true
     mv "$tmp" "$cfg"
     echo "changed: removed the Hebrew font line from $cfg"
   fi

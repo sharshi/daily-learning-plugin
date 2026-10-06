@@ -1,29 +1,32 @@
-// chitas: today's learning in a band above the prompt, and the full text in a
-// sidebar (/chitas-pane). Both are cached per Gregorian day, in memory and in
+// dl (Daily Learning): today's learning in a band above the prompt, and the full text in a
+// sidebar (/dl). Both are cached per Gregorian day, in memory and in
 // the mod's $.store. Data: ./data.ts; Hebrew layout: ./hebrew.ts.
 
 import { atom, read, update } from "claude-code";
 import type { EngineInterface as Host, Register, RenderChildren } from "claude-code";
 
 import type { Day, Status, TabId } from "../types";
-import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, todayKey, toDay } from "./data";
+import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, linesFor, todayKey, toDay } from "./data";
 import type { Brief } from "./data";
-import { cleanHe, cleanText, gematria, termVisual, visual, wrap } from "./hebrew";
+import { cleanHe, cleanText, termVisual, visual, wrap } from "./hebrew";
+import { svgPage } from "./svg";
+import type { Line } from "./svg";
 
-const PANE = "chitas";
+const PANE = "dl";
 const TABS: [TabId, string][] = [
   ["chumash", "Chumash + Rashi"], ["tehillim", "Tehillim"],
   ["tanya", "Tanya"], ["rambam1", "Rambam ×1"], ["rambam3", "Rambam ×3"], ["hayom", "Hayom Yom"],
+  ["daf", "Daf Yomi"],
 ];
 
 
 // ---- pane state ---------------------------------------------------------
-const day = atom({ plugin: "chitas", key: "day" } as const, null);
-const status = atom({ plugin: "chitas", key: "status" } as const, null);
-const tab = atom({ plugin: "chitas", key: "tab" } as const, "chumash");
-const english = atom({ plugin: "chitas", key: "english" } as const, false);
-const nikkud = atom({ plugin: "chitas", key: "nikkud" } as const, true);
-const perek = atom({ plugin: "chitas", key: "perek" } as const, null);
+const day = atom({ plugin: "dl", key: "day" } as const, null);
+const status = atom({ plugin: "dl", key: "status" } as const, null);
+const tab = atom({ plugin: "dl", key: "tab" } as const, "chumash");
+const english = atom({ plugin: "dl", key: "english" } as const, false);
+const nikkud = atom({ plugin: "dl", key: "nikkud" } as const, true);
+const perek = atom({ plugin: "dl", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
 let state: { key: string | null; data: Brief | null; error: string | null; loading: boolean } =
@@ -41,7 +44,7 @@ async function setHidden($: Host, key: string | null) {
 
 async function getJSON($: Host, url: string) {
   const res = await $.http.fetch(url, {
-    headers: { "User-Agent": "chitas-cc-mod (+https://github.com/sharshi/chitas-cc-mod)", Accept: "application/json" },
+    headers: { "User-Agent": "daily-learning (+https://github.com/sharshi/daily-learning)", Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return JSON.parse(res.text);
@@ -107,7 +110,7 @@ async function loadDay($: Host, key: string) {
     let d = (await $.store.get(storeKey)) as Day | undefined;
     // Older builds kept a Day under day-<date>; the prune below removes it.
     if (!d) {
-      const script = `${$.plugin.root}/scripts/chitas.py`;
+      const script = `${$.plugin.root}/scripts/dl.py`;
       const r = await $.process.run(["python3", script, "--json", "--full"], { timeoutMs: 300_000 });
       if (r.exitCode !== 0) throw new Error(r.stderr.trim().split("\n").pop() || `exit ${r.exitCode}`);
       d = toDay(key, JSON.parse(r.stdout));
@@ -130,19 +133,31 @@ const shownTabs = (d: Day | null) => TABS.filter(([id]) => !d || hasText(d, id))
 // Band rows → the sidebar tab that holds their text.
 const BAND_TAB: Record<string, TabId> = {
   Chumash: "chumash", Tehillim: "tehillim", Tanya: "tanya",
-  "Rambam ×3": "rambam3", "Rambam ×1": "rambam1", "Hayom Yom": "hayom",
+  "Rambam ×3": "rambam3", "Rambam ×1": "rambam1", "Hayom Yom": "hayom", "Daf Yomi": "daf",
 };
 
 async function openPane($: Host, t?: TabId) {
   if (t) await update($, tab, () => t);
   void ensureDay($);
-  await $.ui.open({ id: PANE, title: "Chitas", focus: true });
+  await $.ui.open({ id: PANE, title: "Daily Learning", focus: true });
 }
 
 // Terminals with a bidi of their own, which get termVisual's order (see
 // hebrew.ts); every other terminal gets visual's.
 const RLM = "\u200F";
 const BIDI_TERMINALS = new Set(["Apple_Terminal"]);
+
+// The bundled font as WOFF, base64, for the Desktop app's SVG pages; null until
+// read (or if it can't be, in which case the Desktop app gets text).
+let fontBase64: string | null = null;
+
+async function loadFont($: Host) {
+  try {
+    const r = await $.fs.read(`${$.plugin.root}/fonts/ShlomoSemiStam.woff`, { as: "bytes" });
+    fontBase64 = typeof r === "string" ? null : r.base64;
+    $.ui.invalidate("ui.render");
+  } catch {}
+}
 
 // ---- ui -----------------------------------------------------------------
 // The "Hebrew font" setting: install the bundled font and map Ghostty's Hebrew
@@ -154,20 +169,21 @@ async function applyFont($: Host, choice: unknown) {
   try {
     const r = await $.process.run(argv, { timeoutMs: 30_000 });
     const changed = r.stdout.split("\n").filter((l) => l.startsWith("changed:"));
-    if (r.exitCode !== 0) $.ui.toast(`chitas: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
+    if (r.exitCode !== 0) $.ui.toast(`dl: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
     else if (changed.length)
-      $.ui.toast(`chitas: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
+      $.ui.toast(`dl: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
   } catch (err: any) {
-    $.ui.toast(`chitas: Hebrew font setting failed: ${err?.message || err}`);
+    $.ui.toast(`dl: Hebrew font setting failed: ${err?.message || err}`);
   }
 }
 
 export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
     void applyFont($, options.hebrew_font);
+    void loadFont($);
     hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
-    await $.command.register({ name: "chitas-toggle", description: "Show or hide the chitas line above the prompt" });
-    await $.command.register({ name: "chitas-pane", description: "Open today's Chitas text in a sidebar" });
+    await $.command.register({ name: "dl-toggle", description: "Show or hide the daily learning line above the prompt" });
+    await $.command.register({ name: "dl", description: "Open today's learning in a sidebar" });
     void ensure($, todayKey());
     void ensureDay($); // warm the sidebar text: from the store when cached
     return next(e);
@@ -182,9 +198,9 @@ export const register: Register = (on, options) => {
     void ensure($, key); // no-op unless the date rolled over
 
     if (state.loading && !state.data)
-      return <Box paddingX={1}><Text dimColor>✡ chitas · loading…</Text></Box>;
+      return <Box paddingX={1}><Text dimColor>✡ dl · loading…</Text></Box>;
     if (state.error && !state.data)
-      return <Box paddingX={1}><Text color="red">✡ chitas · {state.error}</Text></Box>;
+      return <Box paddingX={1}><Text color="red">✡ dl · {state.error}</Text></Box>;
     if (!state.data) return next(e);
 
     // One line: the date opens the sidebar, each section opens its tab, Daf
@@ -206,22 +222,23 @@ export const register: Register = (on, options) => {
     );
   });
 
-  // /chitas-toggle hides the line for today, or brings it back.
-  on("command.run", { command: "chitas-toggle" }, async ($) => {
+  // /dl-toggle hides the line for today, or brings it back.
+  on("command.run", { command: "dl-toggle" }, async ($) => {
     const key = todayKey();
     const hide = hiddenFor !== key;
     await setHidden($, hide ? key : null);
-    return { text: hide ? "chitas: hidden for today (/chitas-toggle to show it)" : "chitas: shown" };
+    return { text: hide ? "dl: hidden for today (/dl-toggle to show it)" : "dl: shown" };
   });
 
-  // /chitas-pane opens the sidebar and fetches the text in the background.
-  on("command.run", { command: "chitas-pane" }, async ($) => {
+  // /dl opens the sidebar and fetches the text in the background.
+  on("command.run", { command: "dl" }, async ($) => {
     await openPane($);
-    return { text: "Chitas opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Daily Learning opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
+    const Svg = e.surface === "desktop" ? $.ui.resolve(e).Svg : null;
     const [d, st, t, showEn, nk, pk] = await Promise.all([
       read($, day), read($, status), read($, tab), read($, english), read($, nikkud), read($, perek),
     ]);
@@ -275,59 +292,55 @@ export const register: Register = (on, options) => {
       </Box>
     );
 
+    // A line of the body drawn as terminal text.
+    const draw = (l: Line, k: string) =>
+      l.kind === "gap" ? <Text key={k}> </Text>
+        : l.kind === "heading" ? heading(l.text, k)
+        : l.kind === "he" ? he(l.text, k, l.rashi ? "magenta" : undefined, l.label)
+        : en(l.text, k, l.rashi ? "magenta" : undefined, l.label);
+
+    // The body's lines in the Desktop app: one SVG with the Hebrew font in it,
+    // or text when the font isn't at hand or the page is too big for an SVG.
+    const page = (lines: Line[], k: string) => {
+      if (e.surface === "desktop" && fontBase64) {
+        const svg = svgPage(lines.map((l) =>
+          l.kind === "he" ? { ...l, text: cleanHe(l.text, nk) }
+            : l.kind === "heading" ? { ...l, text: cleanHe(l.text, nk) }
+            : l.kind === "en" ? { ...l, text: cleanText(l.text) } : l), fontBase64);
+        if (svg && Svg) return [<Svg key={`${k}svg`} source={svg} alt="The day's text in Hebrew" />];
+      }
+      return lines.map((l, i) => draw(l, `${k}l${i}`));
+    };
+
     const body = () => {
       if (!d || d.key !== todayKey()) {
         if (st?.phase === "error") return <Text color="red">Could not load: {st.error}</Text>;
         return <Text dimColor>Loading today's text… (the first fetch takes a little while)</Text>;
       }
       // A tab kept from an older build, or one hidden for lack of text, falls back to Chumash.
-      const parts = shownTabs(d).some(([id]) => id === t) ? d.parts[t] : d.parts.chumash;
+      const tabId: TabId = shownTabs(d).some(([id]) => id === t) ? t : "chumash";
+      const parts = d.parts[tabId] ?? [];
       if (!parts.length) return <Text dimColor>Nothing listed for this today.</Text>;
       return parts.map((p, pi) => {
-        // Verse by verse: the Hebrew, the English when on, then that verse's Rashi.
-        const paired = p.he.length === p.en.length;
-        const rashi = p.rashi && p.rashi.he.length === p.he.length ? p.rashi : null;
-        const rows: RenderChildren[] = [];
-        const chapters = p.chapters;
-        if (chapters) {
-          // Rambam: one perek at a time under its heading, each halacha led by
-          // its number, with buttons to the previous and next perek.
-          const n = chapters.length;
-          const at = Math.min(pk?.key === d.key ? pk.i : 0, n - 1);
-          const go = (i: number) => update($, perek, () => ({ key: d.key, i }));
-          const nav = (where: "top" | "end") => n > 1 ? (
-            <Box key={`${pi}nav-${where}`} flexDirection="row" justifyContent="space-between">
-              {at > 0
-                ? <Button key={`perek-prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
-                    label={`‹ perek ${gematria(chapters[at - 1]!.n)}`} onPress={() => go(at - 1)} />
-                : <Text> </Text>}
-              <Text dimColor>perek {at + 1} of {n}</Text>
-              {at < n - 1
-                ? <Button key={`perek-next-${where}`} plain hotkey={where === "end" ? "j" : undefined}
-                    variant="primary" label={`next perek ${gematria(chapters[at + 1]!.n)} ›`} onPress={() => go(at + 1)} />
-                : <Text dimColor>done ✓</Text>}
-            </Box>
-          ) : null;
-          const c = chapters[at]!;
-          rows.push(nav("top"));
-          rows.push(heading(`פרק ${gematria(c.n)}`, `${pi}c${at}`));
-          const aligned = c.he.length === c.en.length;
-          c.he.forEach((hv, i) => {
-            rows.push(he(hv, `${pi}c${at}h${i}`, undefined, `${gematria(i + 1)}.`));
-            if (showEn && aligned) rows.push(en(c.en[i]!, `${pi}c${at}e${i}`, undefined, `${i + 1}.`));
-            rows.push(<Text key={`${pi}c${at}s${i}`}> </Text>);
-          });
-          rows.push(nav("end"));
-        } else p.he.forEach((hv, i) => {
-          rows.push(he(hv, `${pi}h${i}`));
-          if (showEn && paired) rows.push(en(p.en[i]!, `${pi}e${i}`));
-          rashi?.he[i]?.forEach((c, j) => rows.push(he(c, `${pi}r${i}.${j}`, "magenta")));
-          if (showEn) rashi?.en[i]?.forEach((c, j) => rows.push(en(c, `${pi}re${i}.${j}`, "magenta")));
-          rows.push(<Text key={`${pi}s${i}`}> </Text>);
-        });
-        if (showEn && !paired && !chapters) p.en.forEach((x, i) => { rows.push(en(x, `${pi}e${i}`)); rows.push(<Text key={`${pi}es${i}`}> </Text>); });
-        // Rashi that did not line up with the verses still shows, after them.
-        if (p.rashi && !rashi) p.rashi.he.flat().forEach((c, j) => rows.push(he(c, `${pi}rx${j}`, "magenta")));
+        const sections = p.sections ?? [];
+        const n = sections.length;
+        const at = Math.min(pk?.key === d.key ? pk.at[tabId] ?? 0 : 0, Math.max(n - 1, 0));
+        const go = (i: number) => update($, perek, (v) =>
+          ({ key: d.key, at: { ...(v?.key === d.key ? v.at : {}), [tabId]: i } }));
+        // Previous and next section (perek, amud), above the text and below it.
+        const nav = (where: "top" | "end") => n > 1 ? (
+          <Box key={`${pi}nav-${where}`} flexDirection="row" justifyContent="space-between">
+            {at > 0
+              ? <Button key={`prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
+                  label={`‹ ${p.unit} ${sections[at - 1]!.short}`} onPress={() => go(at - 1)} />
+              : <Text> </Text>}
+            <Text dimColor>{p.unit} {at + 1} of {n}</Text>
+            {at < n - 1
+              ? <Button key={`next-${where}`} plain hotkey={where === "end" ? "j" : undefined}
+                  variant="primary" label={`next ${p.unit} ${sections[at + 1]!.short} ›`} onPress={() => go(at + 1)} />
+              : <Text dimColor>done ✓</Text>}
+          </Box>
+        ) : null;
         const empty = !p.he.length && !p.en.length;
         return (
           <Box key={`p${pi}`} flexDirection="column" marginBottom={1}>
@@ -335,7 +348,9 @@ export const register: Register = (on, options) => {
             {empty && <Text dimColor>No text from Sefaria for this one; read it on chabad.org:</Text>}
             {(empty ? p.chabad || p.link : p.link) && <Text dimColor>{empty ? p.chabad || p.link : p.link}</Text>}
             <Text> </Text>
-            {rows.filter(Boolean)}
+            {nav("top")}
+            {page(linesFor(p, at, showEn), `p${pi}`)}
+            {nav("end")}
           </Box>
         );
       });
@@ -347,7 +362,7 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="space-between">
-          <Text color="cyan" bold>✡ {d?.title ?? "Chitas"}</Text>
+          <Text color="cyan" bold>✡ {d?.title ?? "Daily Learning"}</Text>
           {hebDate ? <Text color="cyan">{order(hebDate.split(" "))}</Text> : null}
         </Box>
         <Box flexDirection="row" flexWrap="wrap">

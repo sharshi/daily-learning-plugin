@@ -3,7 +3,7 @@ import type { On } from "claude-code";
 import fixture from "./fixture-day";
 
 const PROPS = {
-  title: "Chitas", isFocused: true, bodyColumns: 60, placement: "dock" as const,
+  title: "Daily Learning", isFocused: true, bodyColumns: 60, placement: "dock" as const,
   scroll: { offset: 0, bodyRows: 40 }, view: {},
 };
 // The test environment has timers; its type library doesn't declare them.
@@ -11,7 +11,8 @@ declare const setTimeout: (fn: (v?: unknown) => void, ms: number) => unknown;
 const settle = () => new Promise((r) => setTimeout(r, 500));
 
 // What the engine does beneath the mod: the script, the store, the pane, the band's fetches.
-function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }, term = "ghostty") {
+function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }, term = "ghostty", font?: string) {
+  if (font) on("fs.read", async () => ({ value: { base64: font } }) as never);
   on("env.get", async (_$, e: any) => ({ value: e.name === "TERM_PROGRAM" ? term : undefined }) as never);
   const store = new Map<string, unknown>();
   const opened: string[] = [];
@@ -34,12 +35,12 @@ function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: s
   return { opened, clock: mock.clock(on) };
 }
 
-test("pane shows the Chumash text after /chitas-pane", { timeoutMs: 20000 }, async ($, on) => {
+test("pane shows the Chumash text after /dl", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
   for (const surface of ["terminal", "desktop"] as const) {
-    const ui = await $.ui.mount({ plugin: "chitas", surface, component: "Pane", requestId: "chitas", props: PROPS as never });
+    const ui = await $.ui.mount({ plugin: "dl", surface, component: "Pane", requestId: "dl", props: PROPS as never });
     expect(JSON.stringify(await ui.drawn())).toContain("Bereshit");
     for (const tab of ["chumash", "tehillim", "tanya", "rambam1", "rambam3"]) {
       await ui.press({ key: `tab-${tab}` } as never);
@@ -53,7 +54,7 @@ test("pane shows the Chumash text after /chitas-pane", { timeoutMs: 20000 }, asy
 
 test("pane loads its text by itself when drawn", { timeoutMs: 20000 }, async ($, on) => {
   const { clock } = host(on);
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   await clock.advance(1);
   await settle();
   expect(JSON.stringify(await ui.drawn())).toContain("Bereshit");
@@ -61,20 +62,20 @@ test("pane loads its text by itself when drawn", { timeoutMs: 20000 }, async ($,
 
 test("clicking a band row opens the pane on that section", { timeoutMs: 20000 }, async ($, on) => {
   const { opened } = host(on);
-  const band = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "AbovePrompt", props: {} as never });
+  const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
   await settle();
   await band.press({ key: "row-Tanya" } as never);
-  expect(opened).toContain("chitas");
+  expect(opened).toContain("dl");
   await settle();
-  const pane = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const pane = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   expect(JSON.stringify(await pane.drawn())).toContain("Tanya · 25 Tishrei");
 });
 
 test("Chumash shows each verse's Rashi under it; English is a toggle", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
   const texts = async () => (await ui.findAll({ type: "Text" })).map((t) => t.text);
   let t = await texts();
   // Rashi on 2:21 (מצלעותיו) sits after verse 2:21 and before verse 2:22.
@@ -93,9 +94,9 @@ test("Chumash shows each verse's Rashi under it; English is a toggle", { timeout
 
 test("Rambam ×3 has its text", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-rambam3" } as never);
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   expect(t).toContain("Rambam ×3");
@@ -105,12 +106,12 @@ test("Rambam ×3 has its text", { timeoutMs: 20000 }, async ($, on) => {
 
 test("Hayom Yom is left out when its text did not load", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const pane = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const pane = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   expect(await pane.find({ key: "tab-hayom" })).toBeUndefined();
   expect(JSON.stringify(await pane.drawn())).not.toContain("hayom yom text");
-  const band = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "AbovePrompt", props: {} as never });
+  const band = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "AbovePrompt", props: {} as never });
   await settle();
   expect(await band.find({ key: "row-Hayom Yom" })).toBeUndefined();
   expect(await band.find({ key: "row-Tanya" })).toBeDefined();
@@ -118,9 +119,9 @@ test("Hayom Yom is left out when its text did not load", { timeoutMs: 20000 }, a
 
 test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-rambam3" } as never);
   const read = async () => {
     const texts = await ui.findAll({ type: "Text" });
@@ -137,35 +138,35 @@ test("Rambam halachot are numbered in bold, restarting each chapter", { timeoutM
   expect(r.labels.slice(0, 3)).toEqual(["א.", "ב.", "ג."]);
   expect(r.labels).toContain("טו.");
   expect(r.labels.length).toBe(22);
-  expect(await ui.find({ key: "perek-prev-end" })).toBeUndefined();
+  expect(await ui.find({ key: "prev-end" })).toBeUndefined();
 
-  await ui.press({ key: "perek-next-end" } as never);
+  await ui.press({ key: "next-end" } as never);
   r = await read();
   expect(r.headings).toEqual(["פרק יג"]);
   expect(r.all).toContain("perek 2 of 3");
   expect(r.labels[0]).toBe("א."); // numbering restarts each perek
   expect(r.labels.length).toBe(27);
 
-  await ui.press({ key: "perek-next-top" } as never);
+  await ui.press({ key: "next-top" } as never);
   r = await read();
   expect(r.headings).toEqual(["פרק יד"]);
   expect(r.all).toContain("done ✓");
-  expect(await ui.find({ key: "perek-next-end" })).toBeUndefined();
+  expect(await ui.find({ key: "next-end" })).toBeUndefined();
 
-  await ui.press({ key: "perek-prev-end" } as never);
+  await ui.press({ key: "prev-end" } as never);
   expect((await read()).headings).toEqual(["פרק יג"]);
 
   // Rambam ×1 is a single perek: no perek buttons.
   await ui.press({ key: "tab-rambam1" } as never);
-  expect(await ui.find({ key: "perek-next-end" })).toBeUndefined();
+  expect(await ui.find({ key: "next-end" })).toBeUndefined();
   expect((await read()).headings).toEqual(["פרק ב"]);
 });
 
 test("Tanya shows the whole day's portion", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-tanya" } as never);
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   expect(t).toContain("Tanya · 25 Tishrei (Iggeret HaKodesh 25:1-5)");
@@ -196,9 +197,9 @@ for (const [choice, flag] of [["Shlomo SemiStam", undefined], ["Terminal default
 for (const [term, reversed] of [["ghostty", true], ["Apple_Terminal", false]] as const) {
   test(`Hebrew is ${reversed ? "reversed" : "kept in reading order"} in ${term}`, { timeoutMs: 20000 }, async ($, on) => {
     host(on, undefined, term);
-    await $.command.run({ command: "chitas-pane", args: "" } as never);
+    await $.command.run({ command: "dl", args: "" } as never);
     await settle();
-    const ui = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+    const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
     const texts = (await ui.findAll({ type: "Text" })).map((t) => t.text.replace(/[֑-ׇ‎]/g, ""));
     // Genesis 2:20 opens ויקרא; reversed for Ghostty it reads ארקיו from the left.
     expect(texts.some((t) => t.includes(reversed ? "ארקיו" : "ויקרא"))).toBe(true);
@@ -208,9 +209,9 @@ for (const [term, reversed] of [["ghostty", true], ["Apple_Terminal", false]] as
 
 test("Mac Terminal: words go right to left, letters as written, edge punctuation moved", { timeoutMs: 20000 }, async ($, on) => {
   host(on, undefined, "Apple_Terminal");
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-rambam3" } as never);
   const texts = await ui.findAll({ type: "Text" });
   const bare = (x: string) => x.replace(/[\u0591-\u05C7\u200F]/g, "");
@@ -233,9 +234,9 @@ test("Mac Terminal: words go right to left, letters as written, edge punctuation
 
 test("each letter's dagesh and shin dot come before its vowel", { timeoutMs: 20000 }, async ($, on) => {
   host(on, undefined, "Apple_Terminal"); // reading order, so words can be found as written
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "terminal", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-tehillim" } as never);
   const t = (await ui.findAll({ type: "Text" })).map((x) => x.text).join("\n");
   // Psalm 119:1 בְּתוֹרַת: bet, dagesh, sheva (Sefaria has bet, sheva, dagesh).
@@ -247,9 +248,9 @@ test("each letter's dagesh and shin dot come before its vowel", { timeoutMs: 200
 
 test("Desktop: Hebrew wrapped and right-aligned, in reading order inside right-to-left marks", { timeoutMs: 20000 }, async ($, on) => {
   host(on);
-  await $.command.run({ command: "chitas-pane", args: "" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
   await settle();
-  const ui = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "Pane", requestId: "chitas", props: PROPS as never });
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
   await ui.press({ key: "tab-rambam3" } as never);
   const texts = await ui.findAll({ type: "Text" });
   const label = texts.find((t) => t.props.bold && t.text.replace(/‏/g, "") === "א.");
@@ -266,7 +267,7 @@ test("band is one line of section buttons, and × hides it for the day", { timeo
   host(on);
   // What the engine draws when the mod passes the band on: nothing.
   on("ui.render", { component: "AbovePrompt" }, async () => ({ type: "Box", props: {}, children: [] }) as never);
-  const band = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "AbovePrompt", props: {} as never });
+  const band = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "AbovePrompt", props: {} as never });
   await settle();
   const drawn = await band.drawn();
   expect((drawn as { props?: { flexDirection?: string } }).props?.flexDirection).toBe("row");
@@ -276,6 +277,52 @@ test("band is one line of section buttons, and × hides it for the day", { timeo
   await band.press({ key: "dismiss" } as never);
   expect(await band.find({ key: "row-Tanya" })).toBeUndefined();
 
-  await $.command.run({ command: "chitas-toggle", args: "" } as never);
+  await $.command.run({ command: "dl-toggle", args: "" } as never);
   expect(await band.find({ key: "row-Tanya" })).toBeDefined();
+});
+
+test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the toggle", { timeoutMs: 20000 }, async ($, on) => {
+  host(on, undefined, "Apple_Terminal"); // reading order, so text can be matched as written
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "tab-daf" } as never);
+  const bare = (x: string) => x.replace(/[\u0591-\u05C7]/g, "");
+  const texts = async () => (await ui.findAll({ type: "Text" })).map((t) => bare(t.text));
+  let t = await texts();
+  expect(t.join("\n")).toContain("Daf Yomi · Bekhorot 18");
+  // Heading דף יח. (sent for macOS Terminal as ".יח דף") and the amud counter.
+  expect(t.some((x) => x.includes(".\u05D9\u05D7") && x.includes("\u05D3\u05E3"))).toBe(true);
+  expect(t.join("\n")).toContain("amud 1 of 2");
+  // Rashi on the first passage: "סבר לה כר' יוסי הגלילי" (words reversed for the terminal).
+  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
+  expect(rashi.length).toBeGreaterThan(5);
+  expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(false);
+  await ui.press({ key: "english" } as never);
+  t = await texts();
+  expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(true);
+  await ui.press({ key: "next-end" } as never);
+  t = await texts();
+  expect(t.join("\n")).toContain("amud 2 of 2");
+  expect(t.some((x) => x.includes(":\u05D9\u05D7") && x.includes("\u05D3\u05E3"))).toBe(true);
+});
+
+test("Desktop: the body is one SVG with the font embedded, Hebrew in reading order", { timeoutMs: 20000 }, async ($, on) => {
+  host(on, undefined, "ghostty", "d09GRgABAAA=");
+  on("session.start", async () => ({ cwd: "/tmp" }) as never);
+  await $.session.start({ cwd: "/tmp" } as never);
+  await $.command.run({ command: "dl", args: "" } as never);
+  await settle();
+  const ui = await $.ui.mount({ plugin: "dl", surface: "desktop", component: "Pane", requestId: "dl", props: PROPS as never });
+  await ui.press({ key: "tab-rambam3" } as never);
+  const svgs = await ui.findAll({ type: "Svg" });
+  expect(svgs.length).toBe(1);
+  const src = String(svgs[0]!.props.source);
+  expect(src).toContain("data:font/woff;base64,d09GRgABAAA=");
+  expect(src.length).toBeLessThanOrEqual(131072);
+  expect(src).toContain('direction="rtl"');
+  expect(src).toContain('<tspan class="b">\u05D0.</tspan>'); // halacha א. in bold
+  expect(src.replace(/[\u0591-\u05C7]/g, "")).toContain("\u05D4\u05D7\u05D5\u05E4\u05E8 \u05D1\u05D5\u05E8"); // החופר בור, as written
+  // Tabs and perek buttons stay outside the picture.
+  expect(await ui.find({ key: "next-end" })).toBeDefined();
 });

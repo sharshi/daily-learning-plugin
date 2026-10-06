@@ -1,9 +1,11 @@
 // The day's learning, shaped for drawing. Pure: the fetching happens in
 // register.tsx, the one file the engine lets call $.
 // - the band: hebcal.com (Hebrew date) and the Sefaria calendar;
-// - the sidebar: scripts/chitas.py --json --full, shaped into a Day.
+// - the sidebar: scripts/dl.py --json --full, shaped into a Day.
 
-import type { Day, Part, TabId } from "../types";
+import type { Day, Part, Section, TabId } from "../types";
+import { gematria } from "./hebrew";
+import type { Line } from "./svg";
 
 const ALIYOT = ["Rishon", "Sheini", "Shlishi", "Revi'i", "Chamishi", "Shishi", "Shvi'i"];
 const TEHILLIM: Record<number, string> = {
@@ -17,7 +19,7 @@ const TEHILLIM: Record<number, string> = {
 const HEB_MONTH: Record<string, string> = { "Sh'vat": "Shevat", Iyyar: "Iyar", Tamuz: "Tammuz" };
 
 // Shape version of a cached Day: bump it when Day changes, and old caches refetch.
-export const DAY_V = 4;
+export const DAY_V = 5;
 
 // What the band shows: the Hebrew date and one [label, ref] row per section.
 export type Brief = {
@@ -86,18 +88,41 @@ function part(title: string, s: any, text: any): Part {
   return { title, link: s?.link, chabad: s?.chabad, he: flat(text?.he), en: flat(text?.en) };
 }
 
-// A Rambam reading with its halachot grouped by chapter; the first chapter's
-// number comes from the ref ("Mishneh Torah, Damages to Property 12-14" → 12).
+// A Rambam reading, one perek at a time, its halachot numbered; the first
+// perek's number comes from the ref ("Mishneh Torah, Damages to Property 12-14" → 12).
 function rambamPart(title: string, r: any, chabad: string): Part {
   const p = part(title, { ...r, chabad }, r.text);
   const he: string[][] = r.text?.he_chapters ?? [];
   const en: string[][] = r.text?.en_chapters ?? [];
   const first = Number(/(\d+)(?:-\d+)?$/.exec(r.ref ?? "")?.[1] ?? 1);
-  if (he.length) p.chapters = he.map((h, i) => ({ n: first + i, he: h, en: en[i] ?? [] }));
+  if (he.length) {
+    p.sections = he.map((h, i): Section => ({
+      name: `פרק ${gematria(first + i)}`, short: gematria(first + i), he: h, en: en[i] ?? [],
+    }));
+    p.unit = "perek";
+    p.numbered = true;
+  }
   return p;
 }
 
-// chitas.py's --json output as the Day the sidebar draws, one list of parts per tab.
+// The daf, one amud at a time ("18a" → דף יח., "18b" → דף יח:), each passage
+// with its Rashi.
+function dafPart(d: any): Part {
+  const amudim: any[] = d.amudim ?? [];
+  const p: Part = { title: `Daf Yomi · ${d.display}`, link: d.link, he: [], en: [] };
+  if (!amudim.length) return p;
+  p.sections = amudim.map((a): Section => {
+    const m = /^(\d+)([ab])$/.exec(a.amud ?? "");
+    const short = m ? `${gematria(Number(m[1]))}${m[2] === "a" ? "." : ":"}` : String(a.amud ?? "");
+    return { name: `דף ${short}`, short, he: a.he ?? [], en: a.en ?? [], rashi: a.rashi_he ?? [] };
+  });
+  p.he = amudim.flatMap((a) => a.he ?? []);
+  p.en = amudim.flatMap((a) => a.en ?? []);
+  p.unit = "amud";
+  return p;
+}
+
+// dl.py's --json output as the Day the sidebar draws, one list of parts per tab.
 export function toDay(key: string, j: any): Day {
   const s = j.sections || {};
   const ch = s.chumash, rb = s.rambam || {};
@@ -112,6 +137,7 @@ export function toDay(key: string, j: any): Day {
     rambam1: rb.one_perek ? [rambamPart(`Rambam ×1 · ${rb.one_perek.display}`, rb.one_perek, rb.chabad)] : [],
     rambam3: rb.three_perakim ? [rambamPart(`Rambam ×3 · ${rb.three_perakim.display}`, rb.three_perakim, rb.chabad)] : [],
     hayom: s.hayom_yom ? [part(s.hayom_yom.ref, s.hayom_yom, s.hayom_yom.text)] : [],
+    daf: s.daf_yomi ? [dafPart(s.daf_yomi)] : [],
   };
   const hd = j.hebrew || {};
   return {
@@ -122,4 +148,33 @@ export function toDay(key: string, j: any): Day {
     parts,
     errors: j.errors || [],
   };
+}
+
+// What a part draws, line by line: for a sectioned part, section `at` under
+// its heading; otherwise verse by verse. Each paragraph is followed by its
+// English (when on and it lines up) and its Rashi.
+export function linesFor(p: Part, at: number, showEn: boolean): Line[] {
+  const out: Line[] = [];
+  const para = (he: string[], en: string[], rashi: string[][] | undefined, rashiEn: string[][] | undefined, numbered: boolean) => {
+    const paired = he.length === en.length;
+    const r = rashi && rashi.length === he.length ? rashi : null;
+    he.forEach((h, i) => {
+      out.push({ kind: "he", text: h, ...(numbered ? { label: `${gematria(i + 1)}.` } : {}) });
+      if (showEn && paired) out.push({ kind: "en", text: en[i]!, ...(numbered ? { label: `${i + 1}.` } : {}) });
+      r?.[i]?.forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
+      if (showEn && r) rashiEn?.[i]?.forEach((c) => out.push({ kind: "en", text: c, rashi: true }));
+      out.push({ kind: "gap" });
+    });
+    if (showEn && !paired) en.forEach((x) => out.push({ kind: "en", text: x }, { kind: "gap" }));
+    // Rashi that did not line up with the paragraphs still shows, after them.
+    if (rashi && !r) rashi.flat().forEach((c) => out.push({ kind: "he", text: c, rashi: true }));
+  };
+  if (p.sections?.length) {
+    const s = p.sections[Math.min(Math.max(at, 0), p.sections.length - 1)]!;
+    out.push({ kind: "heading", text: s.name });
+    para(s.he, s.en, s.rashi, undefined, !!p.numbered);
+  } else {
+    para(p.he, p.en, p.rashi?.he, p.rashi?.en, false);
+  }
+  return out;
 }

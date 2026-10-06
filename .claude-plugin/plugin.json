@@ -1,23 +1,25 @@
 {
-  "name": "chitas",
-  "displayName": "Chitas",
-  "version": "0.4.1",
-  "description": "Today's Chitas, Rambam, Hayom Yom and Daf Yomi in a band above the prompt, and the full Hebrew text (with Rashi, nikkud and an English toggle) in a sidebar.",
+  "name": "dl",
+  "displayName": "Daily Learning",
+  "version": "0.5.0",
+  "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi) on one line above the prompt, and the full Hebrew text in a sidebar.",
   "author": {
     "name": "Shersheial",
     "url": "https://github.com/sharshi"
   },
-  "homepage": "https://github.com/sharshi/chitas-cc-mod",
-  "repository": "https://github.com/sharshi/chitas-cc-mod",
+  "homepage": "https://github.com/sharshi/daily-learning",
+  "repository": "https://github.com/sharshi/daily-learning",
   "license": "MIT",
   "keywords": [
+    "daily-learning",
     "chitas",
     "torah",
     "rambam",
     "tanya",
     "tehillim",
+    "daf-yomi",
+    "talmud",
     "hebrew",
-    "daily-learning",
     "mod"
   ],
   "types": "./types/index.d.ts",
