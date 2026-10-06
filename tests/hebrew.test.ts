@@ -69,10 +69,10 @@ test("svgPage: right-to-left lines, labels in bold, text escaped, null past the 
     { kind: "he", text: "\u05D0 & \u05D1", label: "\u05D0." },
     { kind: "en", text: "a <b> c", rashi: true },
     { kind: "gap" },
-  ], "Zm9udA==")!;
+  ], { key: "shlomo", base64: "Zm9udA==" })!;
   expect(svg).toContain("data:font/woff;base64,Zm9udA==");
   expect(svg).toContain('<tspan class="b">\u05D0.</tspan> \u05D0 &amp; \u05D1');
   expect(svg).toContain(">a &lt;b&gt; c<");
   expect(svg.match(/direction="rtl"/g)?.length).toBe(2);
-  expect(svgPage([{ kind: "he", text: "\u05D0" }], "A".repeat(SVG_LIMIT))).toBe(null);
+  expect(svgPage([{ kind: "he", text: "\u05D0" }], { key: "frank", base64: "A".repeat(SVG_LIMIT) })).toBe(null);
 });

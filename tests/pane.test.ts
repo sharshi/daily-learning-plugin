@@ -175,13 +175,13 @@ test("Tanya shows the whole day's portion", { timeoutMs: 20000 }, async ($, on) 
   expect(bare).toContain("וזהו ״כי ה׳ אמר לו״"); // paragraph 5, the last of the day
 });
 
-for (const [choice, flag] of [["Shlomo SemiStam", undefined], ["Terminal default", "--remove"]] as const) {
+for (const [choice, arg] of [["Shlomo", "Shlomo"], ["Frank Ruhl", "FrankRuhlLibre-Regular"], ["System", "--remove"]] as const) {
   test(`Hebrew font setting "${choice}" runs the font script at session start`, { timeoutMs: 20000, options: { hebrew_font: choice } }, async ($, on) => {
     const runs: string[][] = [];
     const toasts: string[] = [];
     host(on, (argv) => {
       runs.push(argv);
-      const stdout = flag ? "" : "changed: installed Shlomo SemiStam (Ezra SIL SR) to ~/Library/Fonts\n";
+      const stdout = arg === "--remove" ? "" : "changed: installed it to ~/Library/Fonts\n";
       return { exitCode: 0, stdout, stderr: "" };
     });
     on("ui.toast", async (_$, e: any) => { toasts.push(String(e.text ?? e)); return { value: undefined } as never; });
@@ -189,8 +189,8 @@ for (const [choice, flag] of [["Shlomo SemiStam", undefined], ["Terminal default
     await $.session.start({ cwd: "/tmp" } as never);
     await settle();
     expect(runs.length).toBe(1);
-    expect(runs[0]![2]).toBe(flag);
-    expect(toasts.some((t) => t.includes("cmd+shift+,"))).toBe(!flag);
+    expect(runs[0]![2]).toBe(arg);
+    expect(toasts.some((t) => t.includes("cmd+shift+,"))).toBe(arg !== "--remove");
   });
 }
 
@@ -307,7 +307,7 @@ test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the 
   expect(t.some((x) => x.includes(":\u05D9\u05D7") && x.includes("\u05D3\u05E3"))).toBe(true);
 });
 
-test("Desktop: the body is one SVG with the font embedded, Hebrew in reading order", { timeoutMs: 20000 }, async ($, on) => {
+test("Desktop: the body is one SVG with the chosen font embedded, Hebrew in reading order", { timeoutMs: 20000, options: { hebrew_font: "Frank Ruhl" } }, async ($, on) => {
   host(on, undefined, "ghostty", "d09GRgABAAA=");
   on("session.start", async () => ({ cwd: "/tmp" }) as never);
   await $.session.start({ cwd: "/tmp" } as never);

@@ -10,7 +10,7 @@ import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, linesFor, todayKe
 import type { Brief } from "./data";
 import { cleanHe, cleanText, termVisual, visual, wrap } from "./hebrew";
 import { svgPage } from "./svg";
-import type { Line } from "./svg";
+import type { EmbeddedFont, FontKey, Line } from "./svg";
 
 const PANE = "dl";
 const TABS: [TabId, string][] = [
@@ -147,40 +147,50 @@ async function openPane($: Host, t?: TabId) {
 const RLM = "\u200F";
 const BIDI_TERMINALS = new Set(["Apple_Terminal"]);
 
-// The bundled font as WOFF, base64, for the Desktop app's SVG pages; null until
-// read (or if it can't be, in which case the Desktop app gets text).
-let fontBase64: string | null = null;
+// The chosen font as WOFF, base64, for the Desktop app's SVG pages; null for
+// "System", until read, or if it can't be (the Desktop app then gets text).
+let embedded: EmbeddedFont | null = null;
 
-async function loadFont($: Host) {
+async function loadFont($: Host, choice: unknown) {
+  const f = FONTS[String(choice)];
+  if (!f) return;
   try {
-    const r = await $.fs.read(`${$.plugin.root}/fonts/ShlomoSemiStam.woff`, { as: "bytes" });
-    fontBase64 = typeof r === "string" ? null : r.base64;
+    const r = await $.fs.read(`${$.plugin.root}/fonts/${f.file}.woff`, { as: "bytes" });
+    embedded = typeof r === "string" ? null : { key: f.key, base64: r.base64 };
     $.ui.invalidate("ui.render");
   } catch {}
 }
 
 // ---- ui -----------------------------------------------------------------
-// The "Hebrew font" setting: install the bundled font and map Ghostty's Hebrew
-// to it, or take that mapping back out. Terminal only: the Desktop app draws
-// Hebrew with its own fonts. Says so only when something changed.
+// The "Hebrew font" setting's choices: each font's key (for its letter widths),
+// its file under fonts/, and the family name inside it (Shlomo's is inherited
+// from SIL's Ezra).
+const FONTS: Record<string, { key: FontKey; file: string; family: string }> = {
+  "Shlomo": { key: "shlomo", file: "Shlomo", family: "Ezra SIL SR" },
+  "Frank Ruhl": { key: "frank", file: "FrankRuhlLibre-Regular", family: "Frank Ruhl Libre" },
+};
+
+// Install the chosen font and map Ghostty's Hebrew to it, or take the mapping
+// back out for "System". Says so only when something changed.
 async function applyFont($: Host, choice: unknown) {
   const script = `${$.plugin.root}/scripts/install-font.sh`;
-  const argv = choice === "Shlomo SemiStam" ? ["/bin/sh", script] : ["/bin/sh", script, "--remove"];
+  const f = FONTS[String(choice)];
+  const argv = f ? ["/bin/sh", script, f.file, f.family] : ["/bin/sh", script, "--remove"];
   try {
     const r = await $.process.run(argv, { timeoutMs: 30_000 });
     const changed = r.stdout.split("\n").filter((l) => l.startsWith("changed:"));
-    if (r.exitCode !== 0) $.ui.toast(`dl: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
+    if (r.exitCode !== 0) $.ui.toast(`Daily Learning: Hebrew font setting failed: ${r.stderr.trim().split("\n").pop()}`);
     else if (changed.length)
-      $.ui.toast(`dl: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
+      $.ui.toast(`Daily Learning: ${changed.map((l) => l.slice(9)).join("; ")}. Reload Ghostty's config (cmd+shift+,) to see it.`);
   } catch (err: any) {
-    $.ui.toast(`dl: Hebrew font setting failed: ${err?.message || err}`);
+    $.ui.toast(`Daily Learning: Hebrew font setting failed: ${err?.message || err}`);
   }
 }
 
 export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
     void applyFont($, options.hebrew_font);
-    void loadFont($);
+    void loadFont($, options.hebrew_font);
     hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
     await $.command.register({ name: "dl-toggle", description: "Show or hide the daily learning line above the prompt" });
     await $.command.register({ name: "dl", description: "Open today's learning in a sidebar" });
@@ -227,13 +237,13 @@ export const register: Register = (on, options) => {
     const key = todayKey();
     const hide = hiddenFor !== key;
     await setHidden($, hide ? key : null);
-    return { text: hide ? "dl: hidden for today (/dl-toggle to show it)" : "dl: shown" };
+    return { text: hide ? "Hidden for today (/dl-toggle shows it again)." : "Shown." };
   });
 
   // /dl opens the sidebar and fetches the text in the background.
   on("command.run", { command: "dl" }, async ($) => {
     await openPane($);
-    return { text: "Daily Learning opened in the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
+    return { text: "Opened the sidebar. Keys: number keys for tabs · e English · n nikkud · j/k perek · ↑↓ scroll · Esc back to prompt." };
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
@@ -302,11 +312,11 @@ export const register: Register = (on, options) => {
     // The body's lines in the Desktop app: one SVG with the Hebrew font in it,
     // or text when the font isn't at hand or the page is too big for an SVG.
     const page = (lines: Line[], k: string) => {
-      if (e.surface === "desktop" && fontBase64) {
+      if (e.surface === "desktop" && embedded) {
         const svg = svgPage(lines.map((l) =>
           l.kind === "he" ? { ...l, text: cleanHe(l.text, nk) }
             : l.kind === "heading" ? { ...l, text: cleanHe(l.text, nk) }
-            : l.kind === "en" ? { ...l, text: cleanText(l.text) } : l), fontBase64);
+            : l.kind === "en" ? { ...l, text: cleanText(l.text) } : l), embedded);
         if (svg && Svg) return [<Svg key={`${k}svg`} source={svg} alt="The day's text in Hebrew" />];
       }
       return lines.map((l, i) => draw(l, `${k}l${i}`));

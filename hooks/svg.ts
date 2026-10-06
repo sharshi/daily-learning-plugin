@@ -1,8 +1,12 @@
-// The Desktop app's Hebrew: one SVG per reading, with Shlomo SemiStam embedded,
+// The Desktop app's Hebrew: one SVG per reading, with the chosen font embedded,
 // so the app's own text engine shapes the nikkud and lays the lines right to
 // left. The terminal draws the same Line list as text (see register.tsx).
 
 import { ADVANCE } from "./font-metrics";
+
+// A bundled font: which (for its letter widths), and its WOFF as base64.
+export type FontKey = keyof typeof ADVANCE;
+export type EmbeddedFont = { key: FontKey; base64: string };
 
 // One line of the sidebar body, before it is drawn.
 export type Line =
@@ -25,9 +29,9 @@ const MARK = /[\u0591-\u05C7]/;
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // A Hebrew word's width in ems, by the font's own advances; marks take none.
-function ems(w: string) {
+function ems(w: string, adv: Record<number, number>) {
   let n = 0;
-  for (const ch of w) if (!MARK.test(ch)) n += ADVANCE[ch.codePointAt(0)!] ?? 0.55;
+  for (const ch of w) if (!MARK.test(ch)) n += adv[ch.codePointAt(0)!] ?? 0.55;
   return n;
 }
 
@@ -47,7 +51,8 @@ function fit(words: string[], max: number, measure: (w: string) => number, space
 
 // The page as one SVG, or null when it would not fit an Svg element (the
 // caller then draws it as text).
-export function svgPage(lines: Line[], fontBase64: string): string | null {
+export function svgPage(lines: Line[], font: EmbeddedFont): string | null {
+  const adv = ADVANCE[font.key];
   const body: string[] = [];
   let y = PAD;
   const right = W - PAD;
@@ -61,7 +66,7 @@ export function svgPage(lines: Line[], fontBase64: string): string | null {
     }
     if (l.kind === "he") {
       const words = [...(l.label ? [l.label] : []), ...l.text.split(" ").filter(Boolean)];
-      fit(words, heMax, ems, ADVANCE[0x20] ?? 0.34).forEach((ws, i) => {
+      fit(words, heMax, (w) => ems(w, adv), adv[0x20] ?? 0.3).forEach((ws, i) => {
         y += HE.line;
         const head = l.label && i === 0 ? `<tspan class="b">${xml(ws[0]!)}</tspan> ` : "";
         const rest = xml((l.label && i === 0 ? ws.slice(1) : ws).join(" "));
@@ -81,8 +86,8 @@ export function svgPage(lines: Line[], fontBase64: string): string | null {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${h}" width="${W}" height="${h}">` +
     `<style>` +
-    `@font-face{font-family:Shlomo;src:url(data:font/woff;base64,${fontBase64}) format("woff")}` +
-    `.he,.h{font-family:Shlomo,"SF Hebrew","Arial Hebrew",serif}` +
+    `@font-face{font-family:DLHebrew;src:url(data:font/woff;base64,${font.base64}) format("woff")}` +
+    `.he,.h{font-family:DLHebrew,"SF Hebrew","Arial Hebrew",serif}` +
     `.he{font-size:${HE.size}px;fill:#1f1f1f}.h{font-size:${HEADING.size}px;font-weight:bold;fill:#2b8aa6}` +
     `.en{font-family:-apple-system,system-ui,sans-serif;font-size:${EN.size}px;fill:#6b6b6b}` +
     `.r{fill:#9b3f8c}.b{font-weight:bold}` +

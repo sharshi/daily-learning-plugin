@@ -51,7 +51,11 @@ In the sidebar:
 
 ### Setting: Hebrew font
 
-In `/config`, under dl, **Hebrew font** can be set to **Shlomo SemiStam**: the mod installs the bundled font for your user and, in Ghostty, maps the Hebrew block to it (`font-codepoint-map = U+0590-U+05FF=Ezra SIL SR` in your Ghostty config; reload it with cmd+shift+,). Setting it back to **Terminal default** removes that line. Other terminals keep their own fonts. The Desktop app always draws the sidebar's Hebrew in Shlomo SemiStam, whatever this setting says.
+In `/config`, under dl, **Hebrew font** picks the font the sidebar's Hebrew is drawn in: **Shlomo** or **Frank Ruhl** (Frank Ruhl Libre), both bundled, both with nikkud. **System** (the default) leaves every font alone.
+
+- **Desktop app:** the chosen font is embedded in the sidebar's pages.
+- **Ghostty:** the font is installed for your user and Ghostty's Hebrew is mapped to it, with one marked line in your Ghostty config (reload it with cmd+shift+,). A Hebrew mapping you wrote yourself is left alone. Choosing **System** removes the mod's line.
+- **macOS Terminal** has no way to use a separate Hebrew font, so it keeps its own.
 
 ## Terminals
 
@@ -60,7 +64,7 @@ Terminals draw Hebrew in different ways, so the sidebar lays it out per terminal
 | Where | How it reads |
 |---|---|
 | **Ghostty**, and other terminals without right-to-left support | Best. The mod places every letter itself. |
-| **Claude Desktop** (Code tab) | Best. Each reading is drawn as one image with the Shlomo SemiStam font built in, laid out by the app's own text engine. You can't select text inside it. |
+| **Claude Desktop** (Code tab) | Best. With a Hebrew font chosen, each reading is drawn as one image with that font built in, laid out by the app's own text engine (you can't select text inside it); with System, as text. |
 | **macOS Terminal** | Best effort. Terminal reorders Hebrew on its own, and where Claude Code repaints part of the screen it can leave stray letters behind; nikkud on a line's first letter can break. Press `n` to drop nikkud, or use Ghostty. |
 
 ## Sources
@@ -86,8 +90,8 @@ types/index.d.ts       the sidebar's $.state contract
 commands/text.md       /dl:text
 scripts/dl.py          fetches the day's refs and text (stdlib only; also works standalone, --json)
 scripts/install-font.sh  applies the Hebrew font setting
-scripts/make-woff.py   builds fonts/ShlomoSemiStam.woff and hooks/font-metrics.ts from the .ttf
-fonts/                 Shlomo SemiStam (.ttf, and .woff for the Desktop app) and its license
+scripts/make-woff.py   builds the fonts' .woff files and hooks/font-metrics.ts from the .ttf files
+fonts/                 Shlomo and Frank Ruhl Libre (.ttf, and .woff for the Desktop app) and their licenses
 tests/                 claude plugin test suites, with one day's data as a fixture
 ```
 
@@ -102,4 +106,4 @@ An installed copy (`/plugin install`) is a snapshot: bump `version` in `.claude-
 
 ## License
 
-The code is MIT; see [LICENSE](LICENSE). The bundled Shlomo SemiStam font is © SIL International and Shlomo Orbach under the SIL Open Font License 1.1; see [fonts/](fonts/).
+The code is MIT; see [LICENSE](LICENSE). The bundled fonts are under the SIL Open Font License 1.1: Shlomo © SIL International and Shlomo Orbach, Frank Ruhl Libre © The Frank Ruhl Libre Project Authors; see [fonts/](fonts/).
