@@ -28,7 +28,16 @@ const perek = atom({ plugin: "chitas", key: "perek" } as const, null);
 // ---- band state ---------------------------------------------------------
 let state: { key: string | null; data: Brief | null; error: string | null; loading: boolean } =
   { key: null, data: null, error: null, loading: false };
-let collapsed = false;
+// The day the band was dismissed for (YYYY-MM-DD), kept in the store so new
+// sessions that day stay quiet; a new day brings the band back.
+let hiddenFor: string | null = null;
+
+async function setHidden($: Host, key: string | null) {
+  hiddenFor = key;
+  if (key) await $.store.set("hidden", key);
+  else await $.store.delete("hidden");
+  $.ui.invalidate("ui.render");
+}
 
 async function getJSON($: Host, url: string) {
   const res = await $.http.fetch(url, {
@@ -156,7 +165,8 @@ async function applyFont($: Host, choice: unknown) {
 export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
     void applyFont($, options.hebrew_font);
-    await $.command.register({ name: "chitas-toggle", description: "Collapse or expand the chitas band above the prompt" });
+    hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
+    await $.command.register({ name: "chitas-toggle", description: "Show or hide the chitas line above the prompt" });
     await $.command.register({ name: "chitas-pane", description: "Open today's Chitas text in a sidebar" });
     void ensure($, todayKey());
     void ensureDay($); // warm the sidebar text: from the store when cached
@@ -166,6 +176,7 @@ export const register: Register = (on, options) => {
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const key = todayKey();
+    if (hiddenFor === key) return next(e);
     const dd = await read($, day);
     const full = dd?.key === key && dd.v === DAY_V ? dd : null;
     void ensure($, key); // no-op unless the date rolled over
@@ -176,34 +187,31 @@ export const register: Register = (on, options) => {
       return <Box paddingX={1}><Text color="red">✡ chitas · {state.error}</Text></Box>;
     if (!state.data) return next(e);
 
+    // One line: the date opens the sidebar, each section opens its tab, Daf
+    // Yomi (no tab) is text, and × hides the line for the rest of the day.
     const { heb, sections } = state.data;
-    const header = `✡ ${heb.hd} ${heb.hm} ${heb.hy}` +
-      (heb.events.length ? ` · ${heb.events.join(", ")}` : "") +
-      "   /chitas-pane for text";
-
-    if (collapsed)
-      return <Box paddingX={1}><Text dimColor>{header}</Text></Box>;
-
-    // Each row opens the sidebar on its section; Daf Yomi has no tab, so it stays text.
+    const date = `✡ ${heb.hd} ${heb.hm} ${heb.hy}` + (heb.events.length ? ` · ${heb.events.join(", ")}` : "");
+    const shown = sections.filter(([l]) => !(full && BAND_TAB[l] && !hasText(full, BAND_TAB[l])));
     return (
-      <Box paddingX={1} flexDirection="column">
-        <Button key="open" plain label={header} onPress={() => openPane($)} />
-        {sections.filter(([l]) => !(full && BAND_TAB[l] && !hasText(full, BAND_TAB[l]))).map(([l, v]) => {
+      <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={2}>
+        <Button key="open" plain label={date} onPress={() => openPane($)} />
+        {shown.map(([l, v]) => {
           const t = BAND_TAB[l];
-          const label = `${l.padEnd(10)} ${v}`;
           return t
-            ? <Button key={`row-${l}`} plain label={label} onPress={() => openPane($, t)} />
-            : <Text dimColor>{label}</Text>;
+            ? <Button key={`row-${l}`} plain label={l} onPress={() => openPane($, t)} />
+            : <Text key={`row-${l}`} dimColor>{`${l} ${v}`}</Text>;
         })}
+        <Button key="dismiss" plain role="dismiss" label="×" onPress={() => setHidden($, key)} />
       </Box>
     );
   });
 
-  // /chitas-toggle collapses the band to one line.
+  // /chitas-toggle hides the line for today, or brings it back.
   on("command.run", { command: "chitas-toggle" }, async ($) => {
-    collapsed = !collapsed;
-    $.ui.invalidate("ui.render");
-    return { text: collapsed ? "chitas: collapsed" : "chitas: expanded" };
+    const key = todayKey();
+    const hide = hiddenFor !== key;
+    await setHidden($, hide ? key : null);
+    return { text: hide ? "chitas: hidden for today (/chitas-toggle to show it)" : "chitas: shown" };
   });
 
   // /chitas-pane opens the sidebar and fetches the text in the background.

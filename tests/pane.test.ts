@@ -261,3 +261,21 @@ test("Desktop: Hebrew wrapped and right-aligned, in reading order inside right-t
   // The Hebrew date in the header, in reading order: כ״ה בתשרי תשפ״ז
   expect(texts.some((t) => bare(t.text) === "\u05DB\u05F4\u05D4 \u05D1\u05EA\u05E9\u05E8\u05D9 \u05EA\u05E9\u05E4\u05F4\u05D6")).toBe(true);
 });
+
+test("band is one line of section buttons, and × hides it for the day", { timeoutMs: 20000 }, async ($, on) => {
+  host(on);
+  // What the engine draws when the mod passes the band on: nothing.
+  on("ui.render", { component: "AbovePrompt" }, async () => ({ type: "Box", props: {}, children: [] }) as never);
+  const band = await $.ui.mount({ plugin: "chitas", surface: "desktop", component: "AbovePrompt", props: {} as never });
+  await settle();
+  const drawn = await band.drawn();
+  expect((drawn as { props?: { flexDirection?: string } }).props?.flexDirection).toBe("row");
+  expect((await band.find({ key: "row-Tanya" }))?.text).toBe("Tanya");
+  expect(await band.find({ key: "dismiss" })).toBeDefined();
+
+  await band.press({ key: "dismiss" } as never);
+  expect(await band.find({ key: "row-Tanya" })).toBeUndefined();
+
+  await $.command.run({ command: "chitas-toggle", args: "" } as never);
+  expect(await band.find({ key: "row-Tanya" })).toBeDefined();
+});

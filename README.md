@@ -2,7 +2,7 @@
 
 A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) for the daily learning: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam (1 and 3 perakim), Hayom Yom and Daf Yomi.
 
-- **A band above the prompt** with today's Hebrew date and each section's reference. Click a row to open that section's text.
+- **One line above the prompt** with today's Hebrew date and the day's sections. Click a section to open its text; click **×** to hide the line until tomorrow.
 - **A sidebar** (`/chitas-pane`) with the full Hebrew text, laid out right to left:
   - Chumash with each verse's Rashi under it
   - Tehillim on the Chabad monthly cycle
@@ -13,14 +13,7 @@ A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) for t
 - **`/chitas`** prints the day's text into the conversation, where you can ask Claude about it.
 
 ```
-✡ 25 Tishrei 5787 · Parashat Bereshit   /chitas-pane for text
-Chumash    Bereshit · Shlishi (Genesis 2:20-3:21)
-Tehillim   119:1-96  (day 25)
-Tanya      25 Tishrei
-Rambam ×3  Damages to Property 12-14
-Rambam ×1  Levirate Marriage and Release 2
-Hayom Yom  Tishrei 25
-Daf Yomi   Bekhorot 18
+✡ 25 Tishrei 5787 · Parashat Bereshit  Chumash  Tehillim  Tanya  Rambam ×3  Rambam ×1  Hayom Yom  Daf Yomi Bekhorot 18  ×
 ```
 
 ## Install
@@ -41,7 +34,7 @@ Or try it for one session from a clone: `claude --plugin-dir ./chitas-cc-mod`.
 | Command | What it does |
 |---|---|
 | `/chitas-pane` | Open the sidebar |
-| `/chitas-toggle` | Collapse the band to one line, or expand it |
+| `/chitas-toggle` | Hide the line above the prompt for today, or bring it back (the × on the line hides it too) |
 | `/chitas` | Print the text in the conversation (`--refs`, `--full`, `--after-sunset`, `--date 2026-10-05`, `--lang he\|en\|both`) |
 
 In the sidebar:

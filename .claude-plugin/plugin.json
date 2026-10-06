@@ -1,7 +1,7 @@
 {
   "name": "chitas",
   "displayName": "Chitas",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Today's Chitas, Rambam, Hayom Yom and Daf Yomi in a band above the prompt, and the full Hebrew text (with Rashi, nikkud and an English toggle) in a sidebar.",
   "author": {
     "name": "Shersheial",
