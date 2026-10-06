@@ -33,6 +33,7 @@ const libShapes = atom({ plugin: "dl", key: "libShapes" } as const, {});
 const libText = atom({ plugin: "dl", key: "libText" } as const, null);
 const libStatus = atom({ plugin: "dl", key: "libStatus" } as const, null);
 const libLast = atom({ plugin: "dl", key: "libLast" } as const, {});
+const prefsOver = atom({ plugin: "dl", key: "prefsOver" } as const, {});
 const perek = atom({ plugin: "dl", key: "perek" } as const, null);
 
 // ---- band state ---------------------------------------------------------
@@ -279,19 +280,21 @@ async function rowKey($: Host, field: string) {
     ?? rows.find((r) => tail.test(r.key) && /(^|[^A-Za-z0-9_])dl([^A-Za-z0-9_]|$)/.test(r.key)))?.key;
 }
 
-// Change one setting as if in /config; say why when it can't be changed.
+const PREF_FIELDS = ["hebrew_font", "english", "nikkud", "rashi", "text_size"];
+const optionsKey = (o: Record<string, unknown>) => JSON.stringify(PREF_FIELDS.map((f) => o[f] ?? null));
+
+// Change one setting from the sidebar. It takes effect at once and is kept in
+// the plugin's store, over the plugin's options; it is also written to
+// /config where this build lists the plugin's rows there (the Desktop app's
+// may not), which reloads the mod with it. A later change in /config wins.
 async function setPref($: Host, field: string, value: string | boolean) {
+  const over = await update($, prefsOver, (v) => ({ ...v, [field]: value }));
+  await $.store.set("prefs-over", over);
+  if (field === "hebrew_font") { void applyFont($, value); void loadFont($, value); }
   try {
     const key = await rowKey($, field);
-    if (!key) {
-      $.ui.toast(`Daily Learning: no /config row for ${field}; set it in /config instead.`);
-      return;
-    }
-    const r = await $.config.set({ key, value });
-    if ("deny" in r && r.deny) $.ui.toast(`Daily Learning: couldn't change that setting: ${r.deny}`);
-  } catch (err: any) {
-    $.ui.toast(`Daily Learning: couldn't change that setting: ${err?.message || err}`);
-  }
+    if (key) await $.config.set({ key, value });
+  } catch {}
 }
 
 // ---- ui -----------------------------------------------------------------
@@ -322,10 +325,19 @@ async function applyFont($: Host, choice: unknown) {
 }
 
 export const register: Register = (on, options) => {
-  const prefs = prefsOf(options as Record<string, unknown>);
+  const opts = options as Record<string, unknown>;
   on("session.start", async ($, e, next) => {
-    void applyFont($, options.hebrew_font);
-    void loadFont($, options.hebrew_font);
+    // Sidebar choices stand until /config changes one of the plugin's options.
+    let over = ((await $.store.get("prefs-over")) as Record<string, string | boolean> | undefined) ?? {};
+    if ((await $.store.get("prefs-seen")) !== optionsKey(opts)) {
+      over = {};
+      await $.store.set("prefs-over", over);
+      await $.store.set("prefs-seen", optionsKey(opts));
+    }
+    await update($, prefsOver, () => over);
+    const font = over.hebrew_font ?? options.hebrew_font;
+    void applyFont($, font);
+    void loadFont($, font);
     const last = (await $.store.get("lib-last")) as Partial<Record<Coll, { book: string; unit: number }>> | undefined;
     if (last) await update($, libLast, () => last);
     hiddenFor = ((await $.store.get("hidden")) as string | undefined) ?? null;
@@ -395,10 +407,11 @@ export const register: Register = (on, options) => {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e);
     const Svg = e.surface === "desktop" ? $.ui.resolve(e).Svg : null;
-    const [d, st, t, pk, pg, lp, shapes, lt, ls, ll] = await Promise.all([
+    const [d, st, t, pk, pg, lp, shapes, lt, ls, ll, po] = await Promise.all([
       read($, day), read($, status), read($, tab), read($, perek), read($, pageAtom),
-      read($, libPos), read($, libShapes), read($, libText), read($, libStatus), read($, libLast),
+      read($, libPos), read($, libShapes), read($, libText), read($, libStatus), read($, libLast), read($, prefsOver),
     ]);
+    const prefs = prefsOf({ ...opts, ...po });
     const nk = prefs.nikkud;
     // Load on sight: a render never writes state, so start it on a timer.
     if ((d?.key !== todayKey() || d.v !== DAY_V) && st?.phase !== "error") $.clock.after(0, () => void ensureDay($));

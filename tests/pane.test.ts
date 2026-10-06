@@ -12,11 +12,12 @@ const settle = () => new Promise((r) => setTimeout(r, 500));
 
 // What the engine does beneath the mod: the script, the store, the pane, the band's fetches.
 const configSets: { key: string; value: unknown }[] = [];
+let configRows = true; // false: a build whose /config lists no plugin rows (the Desktop app's)
 function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }, term = "ghostty", font?: string) {
   configSets.length = 0;
   on("config.set", async (_$, e: any) => { configSets.push({ key: e.key, value: e.value }); return { value: e.value } as never; });
   // The rows as the Desktop app names them: <plugin>@<marketplace>.<field>.
-  on("config.list", async () => ({ value: ["hebrew_font", "english", "nikkud", "rashi", "text_size"].map((f) => ({
+  on("config.list", async () => ({ value: (configRows ? ["hebrew_font", "english", "nikkud", "rashi", "text_size"] : []).map((f) => ({
     key: `dl@daily-learning.${f}`, label: f, kind: "choice", value: "", provider: { plugin: "dl@daily-learning", tier: "user" }, isLocked: false,
   })) }) as never);
   if (font) on("fs.read", async () => ({ value: { base64: font } }) as never);
@@ -476,4 +477,28 @@ test("Today is a menu: each section with what it is today; inside, back and on t
   // The last section's "next" goes back to the menu.
   await ui.press({ key: "tab-daf" } as never);
   expect(await ui.find({ key: "day-done" })).toBeDefined();
+});
+
+test("settings page where /config lists no plugin rows (Desktop): the choice applies at once and is kept", { timeoutMs: 20000 }, async ($, on) => {
+  configRows = false;
+  const toasts: string[] = [];
+  host(on);
+  on("ui.toast", async (_$, e: any) => { toasts.push(String(e.text ?? e)); return { value: undefined } as never; });
+  try {
+    await $.command.run({ command: "dl", args: "" } as never);
+    await settle();
+    const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
+    await ui.press({ key: "settings" } as never);
+    await ui.press({ key: "set-english-side-by-side" } as never);
+    // Marked as chosen right away, no /config write, no error.
+    expect((await ui.find({ key: "set-english-side-by-side" }))?.props.variant).toBe("primary");
+    expect(configSets).toEqual([]);
+    expect(toasts).toEqual([]);
+    // And the text shows it: English beside the Hebrew.
+    await openTab(ui, "chumash");
+    const pairs = (await ui.findAll({ type: "Box" })).filter((b) => b.props.flexDirection === "row" && b.props.justifyContent === "space-between" && JSON.stringify(b.children).includes("deep sleep"));
+    expect(pairs.length).toBeGreaterThan(0);
+  } finally {
+    configRows = true;
+  }
 });

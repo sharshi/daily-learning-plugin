@@ -55,6 +55,9 @@ declare module "claude-code" {
       libText: { ref: string; part: Part } | null;
       libStatus: { what: string; phase: "loading" | "error"; error?: string } | null;
       libLast: Partial<Record<Coll, { book: string; unit: number }>>;
+      // Settings chosen on the sidebar's settings page, over the plugin's
+      // options (userConfig) until /config changes one of those.
+      prefsOver: Record<string, string | boolean>;
       // Which section (perek, amud) each sectioned tab shows, for which day.
       perek: { key: string; at: Partial<Record<TabId, number>> } | null;
     };
