@@ -56,14 +56,14 @@ def get_json(url, use_cache=True):
     key = re.sub(r"[^A-Za-z0-9]+", "_", url)[-180:]
     path = os.path.join(CACHE_DIR, key + ".json")
     if use_cache and os.path.exists(path):
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         data = json.loads(r.read().decode("utf-8"))
     if use_cache:
         os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f)
     return data
 
@@ -463,6 +463,12 @@ def main():
     p.add_argument("--json", action="store_true")
     p.add_argument("--no-cache", action="store_true")
     args = p.parse_args()
+
+    # Windows consoles and pipes default to a legacy code page (cp1252), which
+    # can't encode Hebrew; always write UTF-8, which is what the pane expects.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
     g = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
     if args.after_sunset:
