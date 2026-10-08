@@ -270,7 +270,7 @@ def build(g, args):
         sec = {"parsha": par["displayValue"]["en"], "aliyah": ALIYAH_NAMES[wd],
                "ref": ref, "link": sefaria_link(ref), "chabad": links["chumash"]}
         if not args.refs:
-            txt, err = safe(sefaria_text, ref, args.lang, use_cache)
+            txt, err = safe(sefaria_text, ref, args.lang, use_cache, True)
             if err:
                 errors.append(f"chumash text: {err}")
             sec["text"] = txt

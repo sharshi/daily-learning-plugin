@@ -23,6 +23,9 @@ export type Part = {
   sections?: Section[];
   unit?: "perek" | "amud";
   numbered?: boolean;
+  // Each paragraph's own number, aligned with `he` (a Chumash verse's "ב."),
+  // and the heading drawn above it where a chapter starts (פרק ג).
+  labels?: { he: string; en: string; heading?: string }[];
 };
 
 // One section: `name` heads it (פרק יב, דף יח.), `short` names it in a button (יב, יח.).

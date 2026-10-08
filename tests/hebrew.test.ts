@@ -1,6 +1,6 @@
 import { expect, test } from "claude-code/testing";
 
-import { briefFrom, hebrewDate, linesFor } from "../hooks/data";
+import { briefFrom, hebrewDate, linesFor, verseLabels } from "../hooks/data";
 import { cleanHe, cleanText, gematria, markOrder, termVisual, visual, wrap } from "../hooks/hebrew";
 import { SVG_LIMIT, svgPage, svgPages } from "../hooks/svg";
 
@@ -96,4 +96,21 @@ test("linesFor: Rashi shorter than the passages still lines up, passage by passa
   const lines = linesFor(part, 0, { english: "off", rashi: true });
   const order = lines.filter((l) => l.kind === "he").map((l) => (l as { text: string }).text);
   expect(order).toEqual(["A1", "R1", "A2", "A3"]);
+});
+
+test("Chumash verses are numbered as Rambam's halachot, each chapter under its heading", () => {
+  const he = (n: number) => Array.from({ length: n }, (_, i) => `v${i}`);
+  const two = verseLabels("Genesis 2:20-3:2", { he: [...he(6), ...he(2)], he_chapters: [he(6), he(2)] })!;
+  expect(two.map((l) => l.en)).toEqual(["20.", "21.", "22.", "23.", "24.", "25.", "1.", "2."]);
+  expect(two[0]).toEqual({ he: `${gematria(20)}.`, en: "20.", heading: `\u05E4\u05E8\u05E7 ${gematria(2)}` });
+  expect(two[6]!.heading).toBe(`\u05E4\u05E8\u05E7 ${gematria(3)}`);
+  expect(two[1]!.heading).toBeUndefined();
+  expect(verseLabels("Exodus 4:5-7", { he: he(3) })!.map((l) => l.en)).toEqual(["5.", "6.", "7."]);
+  // A range over chapters without its chapter split, or counts that don't add up: no numbers.
+  expect(verseLabels("Genesis 2:20-3:2", { he: he(8) })).toBeUndefined();
+  expect(verseLabels("Exodus 4:5-7", { he: he(3), he_chapters: [he(2)] })).toBeUndefined();
+  const lines = linesFor({ title: "", he: ["a", "b"], en: [], labels: [{ he: "x.", en: "1.", heading: "H" }, { he: "y.", en: "2." }] },
+    0, { english: "off", rashi: false });
+  expect(lines.filter((l) => l.kind !== "gap").map((l) => l.kind === "heading" ? l.text : (l as { label?: string }).label))
+    .toEqual(["H", "x.", "y."]);
 });

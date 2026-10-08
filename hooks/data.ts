@@ -19,7 +19,7 @@ const TEHILLIM: Record<number, string> = {
 const HEB_MONTH: Record<string, string> = { "Sh'vat": "Shevat", Iyyar: "Iyar", Tamuz: "Tammuz" };
 
 // Shape version of a cached Day: bump it when Day changes, and old caches refetch.
-export const DAY_V = 6;
+export const DAY_V = 8;
 
 // What the band shows: the Hebrew date and one [label, ref] row per section.
 export type Brief = {
@@ -88,6 +88,29 @@ function part(title: string, s: any, text: any): Part {
   return { title, link: s?.link, chabad: s?.chabad, he: flat(text?.he), en: flat(text?.en) };
 }
 
+// Each verse of a Chumash reading numbered as Rambam's halachot are ("כא.",
+// "21."), with a heading where each chapter starts (פרק ד) as Rambam's perakim
+// have. From the ref's start ("Genesis 2:20-3:21") and the text's chapters,
+// which a range spanning several needs; none when the counts don't add up.
+export function verseLabels(ref: string, text: any): NonNullable<Part["labels"]> | undefined {
+  const m = /(\d+):(\d+)(-\d+:\d+)?(?:-\d+)?$/.exec(ref ?? "");
+  const verses = flat(text?.he).length;
+  if (!m || !verses) return undefined;
+  const chapters: number[] = Array.isArray(text?.he_chapters) && text.he_chapters.length
+    ? text.he_chapters.map((c: unknown[]) => c.length)
+    : m[3] ? [] : [verses];
+  if (chapters.reduce((a, b) => a + b, 0) !== verses) return undefined;
+  const out: NonNullable<Part["labels"]> = [];
+  chapters.forEach((n, ci) => {
+    const c = Number(m[1]) + ci;
+    for (let k = 0; k < n; k++) {
+      const v = (ci === 0 ? Number(m[2]) : 1) + k;
+      out.push({ he: `${gematria(v)}.`, en: `${v}.`, ...(k === 0 ? { heading: `פרק ${gematria(c)}` } : {}) });
+    }
+  });
+  return out;
+}
+
 // A Rambam reading, one perek at a time, its halachot numbered; the first
 // perek's number comes from the ref ("Mishneh Torah, Damages to Property 12-14" → 12).
 function rambamPart(title: string, r: any, chabad: string): Part {
@@ -126,9 +149,11 @@ function dafPart(d: any): Part {
 export function toDay(key: string, j: any): Day {
   const s = j.sections || {};
   const ch = s.chumash, rb = s.rambam || {};
+  const labels = ch && verseLabels(ch.ref, ch.text);
   const parts: Record<TabId, Part[]> = {
     chumash: ch ? [{
       ...part(`${ch.parsha} · ${ch.aliyah} (${ch.ref}) with Rashi`, ch, ch.text),
+      ...(labels ? { labels } : {}),
       ...(ch.rashi ? { rashi: { he: ch.rashi.he_verses || [], en: ch.rashi.en_verses || [] } } : {}),
     }] : [],
     tehillim: s.tehillim ? [part(`Tehillim ${s.tehillim.ref} (day ${s.tehillim.day_of_month})`, s.tehillim, s.tehillim.text)] : [],
@@ -160,14 +185,16 @@ export type LineOptions = { english: English; rashi: boolean };
 export function linesFor(p: Part, at: number, opt: LineOptions): Line[] {
   const out: Line[] = [];
   const showEn = opt.english !== "off";
-  const para = (he: string[], en: string[], rashi: string[][] | undefined, rashiEn: string[][] | undefined, numbered: boolean) => {
+  const para = (he: string[], en: string[], rashi: string[][] | undefined, rashiEn: string[][] | undefined,
+    numbered: boolean, labels?: Part["labels"]) => {
     const paired = he.length === en.length;
     // Rashi lines up with the paragraphs when it has no more entries than they
     // do: Sefaria leaves the list short when the last ones have no Rashi.
     const r = opt.rashi && rashi && rashi.length <= he.length ? rashi : null;
     he.forEach((h, i) => {
-      const label = numbered ? `${gematria(i + 1)}.` : undefined;
-      const enLabel = numbered ? `${i + 1}.` : undefined;
+      if (labels?.[i]?.heading) out.push({ kind: "heading", text: labels[i]!.heading! });
+      const label = numbered ? `${gematria(i + 1)}.` : labels?.[i]?.he;
+      const enLabel = numbered ? `${i + 1}.` : labels?.[i]?.en;
       if (opt.english === "side" && paired) {
         out.push({ kind: "pair", he: h, en: en[i]!, ...(label ? { label, enLabel } : {}) });
       } else {
@@ -192,7 +219,7 @@ export function linesFor(p: Part, at: number, opt: LineOptions): Line[] {
     out.push({ kind: "heading", text: s.name });
     para(s.he, s.en, s.rashi, undefined, !!p.numbered);
   } else {
-    para(p.he, p.en, p.rashi?.he, p.rashi?.en, false);
+    para(p.he, p.en, p.rashi?.he, p.rashi?.en, false, p.labels);
   }
   return out;
 }

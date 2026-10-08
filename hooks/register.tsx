@@ -524,8 +524,8 @@ export const register: Register = (on, options) => {
     const order = isFlipped ? visual : isBidiTerminal ? termVisual : (ws: string[]) => RLM + ws.join(" ") + RLM;
 
     // A Hebrew paragraph, wrapped here and right-aligned line by line, each line
-    // ordered for the surface. `label` (a halacha's "א.") leads the paragraph
-    // in bold, at the right end of its first line.
+    // ordered for the surface. `label` (a halacha's or a verse's "א.") leads the
+    // paragraph in bold, at the right end of its first line.
     const he = (s: string, k: string, color?: string, label?: string, w = width) => {
       const txt = cleanHe(s, nk);
       if (!txt) return null;
