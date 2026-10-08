@@ -364,7 +364,7 @@ test("Daf Yomi: one amud at a time, each passage with its Rashi, English on the 
   expect(t.some((x) => x.includes(".\u05D9\u05D7") && x.includes("\u05D3\u05E3"))).toBe(true);
   expect(t.join("\n")).toContain("amud 1 of 2");
   // Rashi on the first passage: "סבר לה כר' יוסי הגלילי" (words reversed for the terminal).
-  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
+  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "permission");
   expect(rashi.length).toBeGreaterThan(5);
   expect(t.some((x) => x.includes("Rabbi Yosei HaGelili"))).toBe(false);
   await ui.press({ key: "next-end" } as never);
@@ -451,7 +451,7 @@ test("rashi off: the Chumash shows no Rashi", { timeoutMs: 20000, options: { ras
   await settle();
   const ui = await $.ui.mount({ plugin: "dl", surface: "terminal", component: "Pane", requestId: "dl", props: PROPS as never });
   await openTab(ui, "chumash");
-  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "magenta");
+  const rashi = (await ui.findAll({ type: "Text" })).filter((x) => x.props.color === "permission");
   expect(rashi.length).toBe(0);
 });
 

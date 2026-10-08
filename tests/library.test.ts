@@ -136,7 +136,7 @@ test("Library: a daf shows both amudim, each passage with its Rashi", { timeoutM
   // Headings ברכות דף ב. and ברכות דף ב: (word order for macOS Terminal).
   expect(shown.some((x) => x.includes(".ב") && x.includes("דף"))).toBe(true);
   expect(shown.some((x) => x.includes(":ב") && x.includes("דף"))).toBe(true);
-  expect(t.filter((x) => x.props.color === "magenta").length).toBeGreaterThan(0); // Rashi
+  expect(t.filter((x) => x.props.color === "permission").length).toBeGreaterThan(0); // Rashi
 });
 
 test("Library labels in Ghostty: the Hebrew in a button is reversed like the text", { timeoutMs: 30000 }, async ($, on) => {

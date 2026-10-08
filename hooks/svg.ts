@@ -126,8 +126,8 @@ export function svgPages(lines: Line[], font: EmbeddedFont, opt: PageOptions = {
     `.h,.t{font-family:DLHebrew,"SF Hebrew","Arial Hebrew",serif;direction:rtl}` +
     `.h{font-size:${at(HE.size)}px;fill:#1f1f1f}.t{font-size:${at(HEADING.size)}px;font-weight:bold;fill:#2b8aa6}` +
     `.e{font-family:-apple-system,system-ui,sans-serif;font-size:${at(EN.size)}px;fill:#6b6b6b}` +
-    `.r{fill:#9b3f8c}.b{font-weight:bold}` +
-    `@media (prefers-color-scheme:dark){.h{fill:#e8e8e8}.e{fill:#a3a3a3}.r{fill:#d98fd0}.t{fill:#62c4e0}}` +
+    `.r{fill:#4b5bd6}.b{font-weight:bold}` +
+    `@media (prefers-color-scheme:dark){.h{fill:#e8e8e8}.e{fill:#a3a3a3}.r{fill:#b1b9f9}.t{fill:#62c4e0}}` +
     `</style>`;
   const svg = (parts: string[], height: number) => {
     const h = Math.ceil(height + 2 * PAD);

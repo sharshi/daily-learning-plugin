@@ -176,6 +176,12 @@ const once = (what: string, run: () => Promise<void>) => {
   if (!libFetching.has(what)) libFetching.set(what, run().finally(() => libFetching.delete(what)));
   return libFetching.get(what)!;
 };
+// Text colours, as theme keys so they follow the person's light or dark theme:
+// the body in the theme's own text colour (not the terminal's default, which
+// a dark terminal under a light theme draws pale on the pane), amber titles
+// (yellow in dark, a darker amber in light), indigo Rashi, blue headings.
+const BODY = "text", TITLE = "warning", RASHI = "permission", ACCENT = "ide";
+
 const sefaria = (path: string) => `https://www.sefaria.org/api/${path}`;
 const enc = (s: string) => s.split("/").map(encodeURIComponent).join("/");
 
@@ -438,7 +444,7 @@ export const register: Register = (on, options) => {
       };
       return (
         <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={3}>
-          <Text color="yellow">⏳ Claude's working. Learn while you wait:</Text>
+          <Text color={TITLE}>⏳ Claude's working. Learn while you wait:</Text>
           {recent ? <Button key="wait-lib" plain label={`▶ ${lastLabel(last![recent]!)}`}
             onPress={() => go(async () => { await continueLib($, recent); await update($, pageAtom, () => "library"); })} /> : null}
           {nextToday
@@ -465,7 +471,7 @@ export const register: Register = (on, options) => {
     };
     return (
       <Box paddingX={1} flexDirection="row" flexWrap="wrap" columnGap={3}>
-        <Text key="date" color="cyan">{date}</Text>
+        <Text key="date" color={ACCENT}>{date}</Text>
         <Button key="band-today" plain label="📅 Today's learning" onPress={() => show("read")} />
         <Button key="band-library" plain label="📚 Library" onPress={() => show("library")} />
         {COLL_ORDER.filter((c) => last?.[c]).map((c) => (
@@ -520,7 +526,7 @@ export const register: Register = (on, options) => {
     // A Hebrew paragraph, wrapped here and right-aligned line by line, each line
     // ordered for the surface. `label` (a halacha's "א.") leads the paragraph
     // in bold, at the right end of its first line.
-    const he = (s: string, k: string, color?: "magenta", label?: string, w = width) => {
+    const he = (s: string, k: string, color?: string, label?: string, w = width) => {
       const txt = cleanHe(s, nk);
       if (!txt) return null;
       const lines = wrap(label ? `${label} ${txt}` : txt, w);
@@ -529,27 +535,27 @@ export const register: Register = (on, options) => {
           {lines.map((ws, li) =>
             label && li === 0
               ? <Box flexDirection="row">
-                  <Text color={color}>{order(ws.slice(1))} </Text>
-                  <Text bold color={color}>{order(ws.slice(0, 1))}</Text>
+                  <Text color={color ?? BODY}>{order(ws.slice(1))} </Text>
+                  <Text bold color={color ?? BODY}>{order(ws.slice(0, 1))}</Text>
                 </Box>
-              : <Text wrap="truncate" color={color}>{order(ws)}</Text>)}
+              : <Text wrap="truncate" color={color ?? BODY}>{order(ws)}</Text>)}
         </Box>
       );
     };
-    const en = (s: string, k: string, color?: "magenta", label?: string) => {
+    const en = (s: string, k: string, color?: string, label?: string) => {
       const txt = cleanText(s);
       if (!txt) return null;
       return (
         <Box key={k} flexDirection="row">
-          {label ? <Text bold dimColor={!color} color={color}>{label} </Text> : null}
-          <Text dimColor={!color} color={color}>{txt}</Text>
+          {label ? <Text bold dimColor={!color} color={color ?? BODY}>{label} </Text> : null}
+          <Text dimColor={!color} color={color ?? BODY}>{txt}</Text>
         </Box>
       );
     };
     // A bold chapter heading, right-aligned like the Hebrew under it.
     const heading = (s: string, k: string) => (
       <Box key={k} flexDirection="column" alignItems="flex-end">
-        <Text bold color="cyan">{order(s.split(" "))}</Text>
+        <Text bold color={ACCENT}>{order(s.split(" "))}</Text>
       </Box>
     );
 
@@ -559,12 +565,12 @@ export const register: Register = (on, options) => {
     const draw = (l: Line, k: string) =>
       l.kind === "gap" ? <Text key={k}> </Text>
         : l.kind === "heading" ? heading(l.text, k)
-        : l.kind === "he" ? he(l.text, k, l.rashi ? "magenta" : undefined, l.label)
-        : l.kind === "en" ? en(l.text, k, l.rashi ? "magenta" : undefined, l.label)
+        : l.kind === "he" ? he(l.text, k, l.rashi ? RASHI : undefined, l.label)
+        : l.kind === "en" ? en(l.text, k, l.rashi ? RASHI : undefined, l.label)
         : (
           <Box key={k} flexDirection="row" justifyContent="space-between">
-            <Box width={half} flexDirection="column">{en(l.en, `${k}e`, l.rashi ? "magenta" : undefined, l.enLabel)}</Box>
-            <Box width={half} flexDirection="column">{he(l.he, `${k}h`, l.rashi ? "magenta" : undefined, l.label, half)}</Box>
+            <Box width={half} flexDirection="column">{en(l.en, `${k}e`, l.rashi ? RASHI : undefined, l.enLabel)}</Box>
+            <Box width={half} flexDirection="column">{he(l.he, `${k}h`, l.rashi ? RASHI : undefined, l.label, half)}</Box>
           </Box>
         );
 
@@ -589,7 +595,7 @@ export const register: Register = (on, options) => {
     const settings = () => {
       const row = (field: string, title: string, choices: [string, string | boolean][], current: string | boolean, hint: string) => (
         <Box key={`set-${field}`} flexDirection="column" marginBottom={1}>
-          <Text bold>{title}</Text>
+          <Text bold color={BODY}>{title}</Text>
           <Box flexDirection="row" flexWrap="wrap">
             {choices.map(([label, value]) => (
               <Button key={`set-${field}-${label.replace(/\W+/g, "-").toLowerCase()}`} label={label}
@@ -612,7 +618,7 @@ export const register: Register = (on, options) => {
           String((po.wait_suggest ?? opts.wait_suggest) || "After 45 seconds"), "When a turn runs long, suggest learning on the line above the prompt (at most every 30 minutes)."),
         row("text_size", "Text size", [["Small", "Small"], ["Medium", "Medium"], ["Large", "Large"]], prefs.size,
           e.surface === "terminal" ? "For the Desktop app; a terminal uses its own size." : "The sidebar's text in the Desktop app."),
-        <Button key="settings-done" label="‹ Back to the text" onPress={() => update($, pageAtom, () => "read")} />,
+        <Button key="settings-done" dimColor label="‹ Back to the text" onPress={() => update($, pageAtom, () => "read")} />,
       ];
     };
 
@@ -633,17 +639,17 @@ export const register: Register = (on, options) => {
         $.clock.after(0, () => void ensureLibText($, coll, book, pos.unit!));
 
       const crumbs = [
-        <Button key="crumb-library" plain label="📚 Library" onPress={() => go({})} />,
-        ...(coll ? [<Text key="c1" dimColor> › </Text>, <Button key="crumb-coll" plain label={COLLS[coll].name} onPress={() => go({ coll })} />] : []),
+        <Button key="crumb-library" plain dimColor label="📚 Library" onPress={() => go({})} />,
+        ...(coll ? [<Text key="c1" dimColor> › </Text>, <Button key="crumb-coll" plain dimColor label={COLLS[coll].name} onPress={() => go({ coll })} />] : []),
         ...(coll && pos.section && (shape?.sections.length ?? 0) > 1
-          ? [<Text key="c2" dimColor> › </Text>, <Button key="crumb-section" plain label={pos.section} onPress={() => go({ coll, section: pos.section })} />] : []),
-        ...(book ? [<Text key="c3" dimColor> › </Text>, <Button key="crumb-book" plain label={book.name} onPress={() => go({ coll, section: pos.section, book: book.title })} />] : []),
+          ? [<Text key="c2" dimColor> › </Text>, <Button key="crumb-section" plain dimColor label={pos.section} onPress={() => go({ coll, section: pos.section })} />] : []),
+        ...(book ? [<Text key="c3" dimColor> › </Text>, <Button key="crumb-book" plain dimColor label={book.name} onPress={() => go({ coll, section: pos.section, book: book.title })} />] : []),
       ];
       const head = <Box key="crumbs" flexDirection="row" flexWrap="wrap" marginBottom={1}>{crumbs}</Box>;
       const loading = ls && ls.phase === "loading" ? <Text key="loading" dimColor>Loading {ls.what}…</Text> : null;
       const failed = ls && ls.phase === "error"
         ? <Box key="failed" flexDirection="column"><Text color="red">Could not load {ls.what}: {ls.error}</Text>
-            <Button key="retry" label="Try again" onPress={async () => { await update($, libStatus, () => null); }} /></Box>
+            <Button key="retry" variant="primary" label="Try again" onPress={async () => { await update($, libStatus, () => null); }} /></Box>
         : null;
       // "Continue: Berakhot 5" for a collection read before.
       const cont = (c: Coll) => {
@@ -660,7 +666,7 @@ export const register: Register = (on, options) => {
         ...COLL_ORDER.map((c) => (
           <Box key={`coll-${c}`} flexDirection="column" marginBottom={1}>
             <Box flexDirection="row">
-              <Button key={`open-${c}`} label={`${COLLS[c].name} · ${heb(COLLS[c].he)}`} onPress={() => go({ coll: c })} />
+              <Button key={`open-${c}`} dimColor label={`${COLLS[c].name} · ${heb(COLLS[c].he)}`} onPress={() => go({ coll: c })} />
               {cont(c)}
             </Box>
             <Text dimColor>{COLLS[c].blurb}</Text>
@@ -675,7 +681,7 @@ export const register: Register = (on, options) => {
         head,
         <Box key="cont" flexDirection="row">{cont(coll)}</Box>,
         ...shape.sections.map((sec) => (
-          <Button key={`section-${sec.name.replace(/\W+/g, "-")}`} label={`${sec.name} · ${heb(sec.he)}  (${sec.books.length})`}
+          <Button key={`section-${sec.name.replace(/\W+/g, "-")}`} dimColor label={`${sec.name} · ${heb(sec.he)}  (${sec.books.length})`}
             onPress={() => go({ coll, section: sec.name })} />
         )),
       ];
@@ -688,7 +694,7 @@ export const register: Register = (on, options) => {
           ...(sec?.books ?? []).map((b) => (
             <Button key={`book-${b.title.replace(/\W+/g, "-")}`}
               label={`${b.name} · ${heb(b.he)}  (${b.last - b.first + 1} ${COLLS[coll].unit === "daf" ? "dapim" : "perakim"})`}
-              variant={ll?.[coll]?.book === b.title ? "primary" : "secondary"}
+              variant={ll?.[coll]?.book === b.title ? "primary" : "secondary"} dimColor={ll?.[coll]?.book !== b.title}
               onPress={() => go({ coll, section, book: b.title })} />
           )),
         ];
@@ -715,7 +721,7 @@ export const register: Register = (on, options) => {
       const prev = step(shape, book.title, unit, -1), next = step(shape, book.title, unit, 1);
       const nav = (where: "top" | "end") => (
         <Box key={`libnav-${where}`} flexDirection="row" justifyContent="space-between">
-          {prev ? <Button key={`lib-prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
+          {prev ? <Button key={`lib-prev-${where}`} plain dimColor hotkey={where === "end" ? "k" : undefined}
             label={`‹ ${unitLabel(prev.book, prev.unit)}`} onPress={() => openUnit($, coll, prev.book, prev.unit)} /> : <Text> </Text>}
           <Text dimColor>{unitLabel(book, unit)}</Text>
           {next ? <Button key={`lib-next-${where}`} plain hotkey={where === "end" ? "j" : undefined} variant="primary"
@@ -727,7 +733,7 @@ export const register: Register = (on, options) => {
       return [
         head,
         nav("top"),
-        ...(part ? [<Text key="ltitle" color="yellow" bold>{part.title}</Text>, part.link ? <Text key="llink" dimColor>{part.link}</Text> : null, <Text key="lsp"> </Text>]
+        ...(part ? [<Text key="ltitle" color={TITLE} bold>{part.title}</Text>, <Text key="lsp"> </Text>]
           : [failed ?? loading ?? <Text key="lwait" dimColor>Loading {unitLabel(book, unit)}…</Text>]),
         ...(part ? page(lines, "lib") : []),
         nav("end"),
@@ -742,11 +748,11 @@ export const register: Register = (on, options) => {
 
     // Today: a menu of the day's sections, each with what it is today.
     const todayMenu = (shown: [TabId, string][]) => [
-      <Text key="today-title" bold>Today's learning</Text>,
+      <Text key="today-title" bold color={BODY}>Today's learning</Text>,
       <Text key="today-sp"> </Text>,
       ...shown.map(([id, label], i) => (
         <Box key={`today-${id}`} flexDirection="column" marginBottom={1}>
-          <Button key={`tab-${id}`} label={label} hotkey={String(i + 1)} onPress={() => openTab(id)} />
+          <Button key={`tab-${id}`} dimColor label={label} hotkey={String(i + 1)} onPress={() => openTab(id)} />
           <Text dimColor wrap="truncate">  {d!.parts[id]?.[0]?.title ?? ""}</Text>
         </Box>
       )),
@@ -768,16 +774,16 @@ export const register: Register = (on, options) => {
       // Back to the menu, and on to the day's previous or next section.
       const crumbs = (
         <Box key="today-crumbs" flexDirection="row" marginBottom={1}>
-          <Button key="crumb-today" plain label="📅 Today" onPress={() => openTab(null)} />
-          <Text dimColor> › </Text><Text>{shown[ti]![1]}</Text>
+          <Button key="crumb-today" plain dimColor label="📅 Today" onPress={() => openTab(null)} />
+          <Text dimColor> › </Text><Text color={BODY}>{shown[ti]![1]}</Text>
         </Box>
       );
       const prevTab = shown[ti - 1], nextTab = shown[ti + 1];
       const dayNav = (
         <Box key="day-nav" flexDirection="row" justifyContent="space-between" marginTop={1}>
-          {prevTab ? <Button key="day-prev" plain label={`‹ ${prevTab[1]}`} onPress={() => openTab(prevTab[0])} /> : <Text> </Text>}
-          {nextTab ? <Button key="day-next" plain variant="primary" label={`${nextTab[1]} ›`} onPress={() => openTab(nextTab[0])} />
-            : <Button key="day-done" plain label="Today's menu ›" onPress={() => openTab(null)} />}
+          {prevTab ? <Button key="day-prev" plain dimColor label={`‹ ${prevTab[1]}`} onPress={() => openTab(prevTab[0])} /> : <Text> </Text>}
+          {nextTab ? <Button key="day-next" variant="primary" label={`${nextTab[1]} ›`} onPress={() => openTab(nextTab[0])} />
+            : <Button key="day-done" variant="primary" label="Today's menu ›" onPress={() => openTab(null)} />}
         </Box>
       );
       if (!parts.length) return [crumbs, <Text key="none" dimColor>Nothing listed for this today.</Text>, dayNav];
@@ -791,12 +797,12 @@ export const register: Register = (on, options) => {
         const nav = (where: "top" | "end") => n > 1 ? (
           <Box key={`${pi}nav-${where}`} flexDirection="row" justifyContent="space-between">
             {at > 0
-              ? <Button key={`prev-${where}`} plain hotkey={where === "end" ? "k" : undefined}
+              ? <Button key={`prev-${where}`} plain dimColor hotkey={where === "end" ? "k" : undefined}
                   label={`‹ ${p.unit} ${sections[at - 1]!.short}`} onPress={() => go(at - 1)} />
               : <Text> </Text>}
             <Text dimColor>{p.unit} {at + 1} of {n}</Text>
             {at < n - 1
-              ? <Button key={`next-${where}`} plain hotkey={where === "end" ? "j" : undefined}
+              ? <Button key={`next-${where}`} hotkey={where === "end" ? "j" : undefined}
                   variant="primary" label={`next ${p.unit} ${sections[at + 1]!.short} ›`} onPress={() => go(at + 1)} />
               : <Text dimColor>done ✓</Text>}
           </Box>
@@ -804,9 +810,9 @@ export const register: Register = (on, options) => {
         const empty = !p.he.length && !p.en.length;
         return (
           <Box key={`p${pi}`} flexDirection="column" marginBottom={1}>
-            <Text color="yellow" bold>{p.title}</Text>
+            <Text color={TITLE} bold>{p.title}</Text>
             {empty && <Text dimColor>No text from Sefaria for this one; read it on chabad.org:</Text>}
-            {(empty ? p.chabad || p.link : p.link) && <Text dimColor>{empty ? p.chabad || p.link : p.link}</Text>}
+            {empty && (p.chabad || p.link) && <Text dimColor>{p.chabad || p.link}</Text>}
             <Text> </Text>
             {nav("top")}
             {page(linesFor(p, at, { english: prefs.english, rashi: prefs.rashi }), `p${pi}`)}
@@ -838,8 +844,8 @@ export const register: Register = (on, options) => {
     const navRows = pack(navItems, ([, label]) => label.length + 4);
     const header = [
       <Box key="date" flexDirection="row" justifyContent="space-between">
-        <Text color="cyan" bold wrap="truncate">✡ {d?.title ?? "Daily Learning"}</Text>
-        {hebDate ? <Text color="cyan" wrap="truncate">{order(hebDate.split(" "))}</Text> : null}
+        <Text color={ACCENT} bold wrap="truncate">✡ {d?.title ?? "Daily Learning"}</Text>
+        {hebDate ? <Text color={ACCENT} wrap="truncate">{order(hebDate.split(" "))}</Text> : null}
       </Box>,
       ...navRows.map((row, r) => (
         <Box key={`nav${r}`} flexDirection="row">
