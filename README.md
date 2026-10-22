@@ -44,8 +44,8 @@ In the sidebar, **📅 Today** is a menu of the day's sections; each opens into 
 - **Tehillim** on the Chabad monthly cycle
 - **Tanya**, the whole day's portion
 - **Rambam** ×1 and ×3, perek by perek, each halacha numbered **א. ב. ג.**
-- **Daf Yomi**, amud by amud, with Rashi on each passage
-- **Hayom Yom**, when Sefaria has it
+- **Daf Yomi**, amud by amud, with Rashi under its own heading
+- **Hayom Yom**, with Hebrew and English text
 
 ## Library
 
@@ -55,12 +55,12 @@ In the sidebar, **📅 Today** is a menu of the day's sections; each opens into 
 - **Shas**: the Bavli daf by daf, with Rashi
 - **Mishneh Torah**: 14 sefarim, hilchos perek by perek
 
-Pick a collection, a seder or sefer, a masechta or hilchos, then a perek or daf. **Continue** picks up where you left each one, in any session; **next ›** runs straight on into the next masechta. Texts load from Sefaria only when you open them.
+Pick a collection, a seder or sefer, a masechta or hilchos, then a perek or daf. **Continue** picks up where you left each one, in any session; **next ›** runs straight on into the next masechta. Texts load from Shafeh only when you open them.
 
 ## Hebrew that reads right
 
 - **Fonts**: Frank Ruhl (default) or Shlomo, bundled, with nikkud. Te'amim are left out.
-- **English**: off, under each paragraph, or side by side. Rashi's English too (Rosenbaum & Silbermann).
+- **English**: off, under each paragraph, or side by side. English is available for Chumash, Tehillim, Tanya, Rambam and Hayom Yom. Shas, Mishnayos and Rashi currently have Hebrew text.
 - **Every surface**: the Desktop app draws each reading with the font built in; Ghostty gets every letter placed and its Hebrew mapped to the font; macOS Terminal is best effort (it reorders Hebrew itself).
 
 All of it is on the sidebar's **⚙ Settings** page (`s`), and in `/config` under dl.
@@ -78,13 +78,18 @@ All of it is on the sidebar's **⚙ Settings** page (`s`), and in `/config` unde
 
 ## Sources
 
-Texts and calendar from [Sefaria](https://developers.sefaria.org/), the Hebrew date from [hebcal](https://www.hebcal.com/home/developer-apis), with [chabad.org](https://www.chabad.org/dailystudy) as a fallback.
+All calendar and text requests go to [Shafeh](https://shafeh.org). No Sefaria or Hebcal requests or fallback. Tanya English is the exact daily slice; each Rambam chapter keeps its own number even across hilchos boundaries. Rashi on Shas is shown as amud-level commentary, without inventing alignment to Gemara passages.
+
+Daf Yomi uses Shafeh's calculated cycle. Shekalim, Kinnim and Middot currently lack bundled Gemara text; the plugin reports missing text rather than substituting another reading. English is shown only where Shafeh supplies a translation.
+
+Bundled translations retain their source terms: Tanya — Kehot Publication Society (CC-BY-NC); Rambam — Eliyahu Touger / Moznaim (CC-BY-NC); Tanach — JPS 1917 (public domain). Shas uses the William Davidson Edition (CC-BY-NC). Hayom Yom is © Kehot Publication Society, distributed by Shafeh from Beis Seforim; see the source notices on Shafeh.
 
 ## Develop
 
 ```sh
 claude --plugin-dir .      # run from a clone; edits apply on /reload-plugins
-claude plugin test .       # tests
+claude plugin test .       # sidebar/library tests
+python3 -m unittest discover -s tests -p 'test_*.py' # Python client tests
 claude plugin validate .   # what the mod does, and anything the engine would refuse
 ```
 

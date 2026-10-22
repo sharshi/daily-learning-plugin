@@ -1,6 +1,7 @@
 import { expect, mock, test } from "claude-code/testing";
 import type { On } from "claude-code";
 import fixture from "./fixture-day";
+import { today } from "./fixture-shafeh";
 
 const PROPS = {
   title: "Daily Learning", isFocused: true, bodyColumns: 60, placement: "dock" as const,
@@ -35,9 +36,8 @@ function host(on: On, script?: (argv: string[]) => { exitCode: number; stdout: s
   on("ui.open", async (_$, e: any) => { opened.push(e.id); return { value: { isPlaced: true } } as never; });
   on("command.register", async () => ({ value: undefined }) as never);
   on("http.fetch", async (_$, e: any) => {
-    const body = e.url.includes("hebcal")
-      ? { hd: 25, hm: "Tishrei", hy: 5787, hebrew: "", events: ["Parashat Bereshit"] }
-      : { calendar_items: [{ title: { en: "Tanya Yomi" }, displayValue: { en: "25 Tishrei" } }] };
+    if (!e.url.startsWith("https://shafeh.org/api/v1/")) throw new Error(`Unexpected provider: ${e.url}`);
+    const body = today;
     return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify(body) } } as never;
   });
   return { opened, clock: mock.clock(on) };

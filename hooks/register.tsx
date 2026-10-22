@@ -6,9 +6,9 @@ import { atom, read, update } from "claude-code";
 import type { EngineInterface as Host, Register, RenderChildren } from "claude-code";
 
 import type { Day, Status, TabId } from "../types";
-import { briefFrom, calendarUrl, DAY_V, hebcalUrl, hebrewDate, linesFor, todayKey, toDay } from "./data";
+import { briefFrom, calendarUrl, DAY_V, linesFor, todayKey, toDay } from "./data";
 import type { English } from "./data";
-import { COLL_ORDER, COLLS, findBook, libPart, parseShape, rashiRef, step, textRef, unitLabel, unitName } from "./library";
+import { COLL_ORDER, COLLS, findBook, libPart, parseShape, step, textRef, unitLabel, unitName } from "./library";
 import type { Coll, LibBook } from "./library";
 import type { Brief } from "./data";
 import { cleanHe, cleanText, termVisual, visual, wrap } from "./hebrew";
@@ -61,13 +61,7 @@ async function getJSON($: Host, url: string) {
 
 // Fetch what the band needs for Gregorian day `d` and shape it.
 async function buildBrief($: Host, d: Date): Promise<Brief> {
-  const [heb, cal] = await Promise.all([getJSON($, hebcalUrl(d)), getJSON($, calendarUrl(d))]);
-  let monthHas30 = true;
-  if (+heb.hd === 29) {
-    const next = new Date(d); next.setDate(d.getDate() + 1);
-    try { monthHas30 = +(await getJSON($, hebcalUrl(next))).hd === 30; } catch {}
-  }
-  return briefFrom(d, hebrewDate(heb), cal, monthHas30);
+  return briefFrom(await getJSON($, calendarUrl(d)));
 }
 
 // The band's brief for `key`: from memory, the store, or the network. The band
@@ -75,7 +69,7 @@ async function buildBrief($: Host, d: Date): Promise<Brief> {
 async function ensure($: Host, key: string) {
   if (state.key === key && (state.data || state.loading)) return;
   state = { key, data: null, error: null, loading: true };
-  const storeKey = `brief-${key}`;
+  const storeKey = `brief-shafeh-${key}`;
   try {
     const cached = (await $.store.get(storeKey)) as Brief | undefined;
     if (cached) {
@@ -134,7 +128,7 @@ async function loadDay($: Host, key: string) {
   }
 }
 
-// A section Sefaria had no text for (Hayom Yom today, often) is left out of
+// A section whose text did not load is left out of
 // the sidebar and the band instead of pointing at a page that does not load.
 const hasText = (d: Day, id: TabId) => (d.parts[id] ?? []).some((p) => p.he.length || p.en.length);
 const shownTabs = (d: Day | null) => TABS.filter(([id]) => !d || hasText(d, id));
@@ -182,18 +176,18 @@ const once = (what: string, run: () => Promise<void>) => {
 // (yellow in dark, a darker amber in light), indigo Rashi, blue headings.
 const BODY = "text", TITLE = "warning", RASHI = "permission", ACCENT = "ide";
 
-const sefaria = (path: string) => `https://www.sefaria.org/api/${path}`;
-const enc = (s: string) => s.split("/").map(encodeURIComponent).join("/");
+const shafeh = (path: string) => `https://shafeh.org/api/v1/${path}`;
 
 function ensureShape($: Host, coll: Coll) {
   return once(`shape:${coll}`, async () => {
-    if ((await read($, libShapes))[coll]) return;
+    const existing = (await read($, libShapes))[coll];
+    if (existing?.sections.length && existing.sections.every((s) => s.books.every((b) => b.key))) return;
     await update($, libStatus, () => ({ what: COLLS[coll].name, phase: "loading" as const }));
     try {
-      const key = `lib-shape-${coll}`;
+      const key = `lib-shape-shafeh-${coll}`;
       let shape = (await $.store.get(key)) as ReturnType<typeof parseShape> | undefined;
       if (!shape?.sections?.length) {
-        shape = parseShape(coll, await getJSON($, sefaria(`shape/${enc(COLLS[coll].shape)}`)));
+        shape = parseShape(coll, await getJSON($, shafeh(COLLS[coll].shape)));
         await $.store.set(key, shape);
       }
       await update($, libShapes, (v) => ({ ...v, [coll]: shape }));
@@ -207,18 +201,30 @@ function ensureShape($: Host, coll: Coll) {
 function ensureLibText($: Host, coll: Coll, b: LibBook, unit: number) {
   const ref = textRef(b, unit);
   return once(`text:${ref}`, async () => {
-    if ((await read($, libText))?.ref === ref) return;
+    const existing = await read($, libText);
+    if (existing?.ref === ref && existing.part.link?.startsWith("https://shafeh.org/")) return;
     await update($, libStatus, () => ({ what: ref, phase: "loading" as const }));
     try {
-      const key = `lib-text-${ref}`;
+      const key = `lib-text-shafeh-${ref}`;
       let part = (await $.store.get(key)) as ReturnType<typeof libPart> | undefined;
       if (!part) {
-        const q = "?version=hebrew&version=english&return_format=text_only";
-        const [text, rashi] = await Promise.all([
-          getJSON($, sefaria(`v3/texts/${encodeURIComponent(ref)}${q}`)),
-          coll === "bavli" ? getJSON($, sefaria(`v3/texts/${encodeURIComponent(rashiRef(b, unit))}?version=hebrew&return_format=text_only`)).catch(() => undefined) : undefined,
-        ]);
-        part = libPart(coll, b, unit, text, rashi);
+        const key = encodeURIComponent(b.key!);
+        let text;
+        if (coll === "bavli") {
+          const amudim = [];
+          for (const side of ["a", "b"]) {
+            // Last/first dapim may contain a single amud. Only a 404 means
+            // absent: network and server errors must leave the reading retryable.
+            const url = shafeh(`shas/${key}/${unit}${side}`);
+            try { amudim.push(await getJSON($, url)); }
+            catch (error) { if (!String(error).startsWith("Error: 404 ")) throw error; }
+          }
+          if (!amudim.length) throw new Error("No text available for this daf");
+          text = { amudim };
+        } else {
+          text = await getJSON($, shafeh(`${coll === "mt" ? "rambam" : "mishnah"}/${key}/${unit}`));
+        }
+        part = libPart(coll, b, unit, text);
         // Keep the newest LIB_KEEP texts.
         const recent = (((await $.store.get("lib-recent")) as string[] | undefined) ?? []).filter((k) => k !== key);
         recent.unshift(key);
@@ -811,7 +817,7 @@ export const register: Register = (on, options) => {
         return (
           <Box key={`p${pi}`} flexDirection="column" marginBottom={1}>
             <Text color={TITLE} bold>{p.title}</Text>
-            {empty && <Text dimColor>No text from Sefaria for this one; read it on chabad.org:</Text>}
+            {empty && <Text dimColor>Text unavailable from Shafeh for this reading:</Text>}
             {empty && (p.chabad || p.link) && <Text dimColor>{p.chabad || p.link}</Text>}
             <Text> </Text>
             {nav("top")}

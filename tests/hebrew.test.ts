@@ -1,6 +1,6 @@
 import { expect, test } from "claude-code/testing";
 
-import { briefFrom, hebrewDate, linesFor, verseLabels } from "../hooks/data";
+import { briefFrom, linesFor, verseLabels } from "../hooks/data";
 import { cleanHe, cleanText, gematria, markOrder, termVisual, visual, wrap } from "../hooks/hebrew";
 import { SVG_LIMIT, svgPage, svgPages } from "../hooks/svg";
 
@@ -53,14 +53,11 @@ test("termVisual (macOS Terminal): words reversed, letters kept, edge punctuatio
   expect(termVisual(["\u05D9\u05B0\u05D4\u05B9\u05D5\u05B8\u05D4\u05C3"])).toBe("\u05D9\u05B0\u05D4\u05B9\u05D5\u05B8\u05D4\u05C3");
 });
 
-test("briefFrom: Tehillim on a 29th finishes the book when the month has no 30th", () => {
-  const d = new Date("2026-10-04T12:00:00");
-  const heb = hebrewDate({ hd: "29", hm: "Elul", hy: "5786", hebrew: "", events: [] });
-  const cal = { calendar_items: [{ title: { en: "Tanya Yomi" }, displayValue: { en: "29 Elul" } }] };
-  const row = (b: ReturnType<typeof briefFrom>) => b.sections.find(([l]) => l === "Tehillim")?.[1];
-  expect(row(briefFrom(d, heb, cal, true))).toBe("140-144  (day 29)");
-  expect(row(briefFrom(d, heb, cal, false))).toBe("140-150  (day 29)");
-  expect(briefFrom(d, heb, cal).sections.map(([l]) => l)).toEqual(["Tehillim", "Tanya", "Hayom Yom"]);
+test("briefFrom: uses Shafeh's calculated Tehillim bounds and Hebrew date", () => {
+  const j = { hebrew_date: { day: 29, month_name: "Elul", year: 5786, hebrew: "" },
+    limudim: [{ key: "tehillim", value: "140–150" }, { key: "daf_yomi", value: "Bekhorot 18" }] };
+  expect(briefFrom(j).sections).toEqual([["Tehillim", "140–150"], ["Daf Yomi", "Bekhorot 18"]]);
+  expect(briefFrom(j).heb.hd).toBe(29);
 });
 
 test("svgPage: right-to-left lines, labels in bold, text escaped, null past the size limit", () => {

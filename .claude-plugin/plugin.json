@@ -1,8 +1,8 @@
 {
   "name": "dl",
   "displayName": "Daily Learning",
-  "version": "0.12.2",
-  "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi) on one line above the prompt, and the full Hebrew text in a sidebar.",
+  "version": "0.13.0",
+  "description": "Daily learning in Claude Code: Chitas (Chumash with Rashi, Tehillim, Tanya), Rambam, Hayom Yom and Daf Yomi (with Rashi), powered by Shafeh, on one line above the prompt, and the full Hebrew text in a sidebar.",
   "author": {
     "name": "Shersheial",
     "url": "https://github.com/sharshi"

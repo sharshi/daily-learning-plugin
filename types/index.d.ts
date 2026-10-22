@@ -4,7 +4,7 @@
 // it: sections (sedarim, sefarim) of books (masechtos, hilchos), each with its
 // first and last unit (perek, or daf).
 export type Coll = "mishnah" | "bavli" | "mt";
-export type LibBook = { title: string; he: string; name: string; section: string; first: number; last: number };
+export type LibBook = { title: string; he: string; name: string; section: string; first: number; last: number; key?: string };
 export type LibSection = { name: string; he: string; books: LibBook[] };
 export type LibShape = { sections: LibSection[] };
 // Where the reader is: a collection, a section, a book, a unit.
@@ -29,7 +29,7 @@ export type Part = {
 };
 
 // One section: `name` heads it (פרק יב, דף יח.), `short` names it in a button (יב, יח.).
-export type Section = { name: string; short: string; he: string[]; en: string[]; rashi?: string[][] };
+export type Section = { name: string; short: string; he: string[]; en: string[]; rashi?: string[][]; notes?: string[] };
 
 export type Day = {
   v: number; // shape version: a cached Day of another version is fetched again

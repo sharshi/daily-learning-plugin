@@ -2,13 +2,13 @@ import { expect, mock, test } from "claude-code/testing";
 import type { On } from "claude-code";
 
 import { books, findBook, libPart, parseShape, step, textRef, unitName } from "../hooks/library";
-import fixture from "./fixture-library";
+import { shapes, urls, unitText, today } from "./fixture-shafeh";
 import day from "./fixture-day";
 
 declare const setTimeout: (fn: (v?: unknown) => void, ms: number) => unknown;
 const settle = () => new Promise((r) => setTimeout(r, 300));
 const bare = (x: string) => x.replace(/[֑-ׇ‏]/g, "");
-const F = fixture as any;
+const F = { shapes };
 
 test("parseShape: sections of books; a Bavli book's dapim come from its amudim", () => {
   const m = parseShape("mishnah", F.shapes["Mishnah"]);
@@ -30,19 +30,18 @@ test("step crosses books: after Berakhot 9 comes Peah 1, and back", () => {
   expect(unitName("bavli", 64)).toBe("דף סד");
 });
 
-test("libPart: a daf as its amudim with Rashi per passage; a one-amud daf as one", () => {
+test("libPart: a daf as its amudim with separate Rashi notes; a one-amud daf as one", () => {
   const b = parseShape("bavli", F.shapes["Bavli"]);
   const ber = findBook(b, "Berakhot")!;
-  const two = libPart("bavli", ber, 2, F.texts["Berakhot 2"], F.texts["Rashi on Berakhot 2"]);
+  const two = libPart("bavli", ber, 2, unitText("bavli", "berakhot", 2));
   expect(two.sections!.map((s) => s.short)).toEqual(["ב.", "ב:"]);
-  // Rashi per passage; Sefaria leaves the list short when the last passages have none.
-  expect(two.sections![0]!.rashi!.length).toBeGreaterThan(0);
-  expect(two.sections![0]!.rashi!.length).toBeLessThanOrEqual(two.sections![0]!.he.length);
-  const one = libPart("bavli", ber, 64, F.texts["Berakhot 64"], F.texts["Rashi on Berakhot 64"]);
+  expect(two.sections![0]!.notes!.length).toBeGreaterThan(0);
+  expect(two.sections![0]!.rashi).toBeUndefined(); // never pretend amud-level notes align to passages
+  const one = libPart("bavli", ber, 64, unitText("bavli", "berakhot", 64));
   expect(one.sections!.map((s) => s.name)).toEqual(["ברכות דף סד."]);
-  expect(one.sections![0]!.rashi!.length).toBe(15);
+  expect(one.sections![0]!.notes!.length).toBeGreaterThan(0);
   const m = parseShape("mishnah", F.shapes["Mishnah"]);
-  const p = libPart("mishnah", findBook(m, "Mishnah Berakhot")!, 9, F.texts["Mishnah Berakhot 9"]);
+  const p = libPart("mishnah", findBook(m, "Mishnah Berakhot")!, 9, unitText("mishnah", "berakhot", 9));
   expect(p.numbered).toBe(true);
   expect(p.sections![0]!.name).toBe("ברכות פרק ט");
   expect(textRef(findBook(m, "Mishnah Berakhot")!, 9)).toBe("Mishnah Berakhot 9");
@@ -62,11 +61,9 @@ function host(on: On, term = "Apple_Terminal") {
   on("http.fetch", async (_$, e: any) => {
     const url = decodeURIComponent(String(e.url));
     fetched.push(url);
-    // The band's date and calendar.
-    if (url.includes("hebcal.com")) return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ hd: 25, hm: "Tishrei", hy: 5787, hebrew: "", events: ["Parashat Bereshit"] }) } } as never;
-    if (url.includes("/api/calendars")) return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ calendar_items: [{ title: { en: "Tanya Yomi" }, displayValue: { en: "25 Tishrei" } }] }) } } as never;
-    const m = /\/api\/shape\/(.+)$/.exec(url) ?? /\/api\/v3\/texts\/([^?]+)/.exec(url);
-    const body = url.includes("/api/shape/") ? F.shapes[m![1]!] : F.texts[m![1]!];
+    if (!url.startsWith("https://shafeh.org/api/v1/")) throw new Error(`Unexpected provider: ${url}`);
+    const path = url.split("/api/v1/")[1]!;
+    const body = path.startsWith("today?") ? today : urls[path];
     return { value: body ? { status: 200, ok: true, headers: {}, text: JSON.stringify(body) } : { status: 404, ok: false, headers: {}, text: "" } } as never;
   });
   return { fetched, clock: mock.clock(on) };
@@ -83,11 +80,11 @@ test("Library: menu down to a perek, loaded only as opened, next crosses masecht
 
   await ui.press({ key: "library" } as never);
   expect(await ui.find({ key: "open-mishnah" })).toBeDefined();
-  expect(fetched.filter((u) => /sefaria\.org\/api\/(shape|v3)/.test(u))).toEqual([]); // nothing until a collection opens
+  expect(fetched.filter((u) => !u.includes("/today?"))).toEqual([]); // nothing until a collection opens
 
   await ui.press({ key: "open-mishnah" } as never);
   await tick();
-  expect(fetched.filter((u) => u.includes("/shape/"))).toEqual(["https://www.sefaria.org/api/shape/Mishnah"]);
+  expect(fetched.filter((u) => u.endsWith("/mishnah"))).toEqual(["https://shafeh.org/api/v1/mishnah"]);
   await ui.press({ key: "section-Seder-Zeraim" } as never);
   await ui.press({ key: "book-Mishnah-Berakhot" } as never);
   expect(await ui.find({ key: "unit-9" })).toBeDefined();
@@ -98,7 +95,7 @@ test("Library: menu down to a perek, loaded only as opened, next crosses masecht
   let t = await texts();
   expect(t.some((x) => x.includes("Mishnayos · Berakhot 9"))).toBe(true);
   expect(t.some((x) => x.includes(".א"))).toBe(true); // mishnah א. (sent for macOS Terminal as ".א")
-  expect(fetched.filter((u) => u.includes("/v3/texts/"))).toHaveLength(1);
+  expect(fetched.filter((u) => /\/mishnah\/[^/]+\/\d+$/.test(u))).toHaveLength(1);
 
   // Next from the last perek of Berakhot is Peah 1.
   await ui.press({ key: "lib-next-end" } as never);
@@ -114,10 +111,10 @@ test("Library: menu down to a perek, loaded only as opened, next crosses masecht
   await tick();
   expect((await texts()).some((x) => x.includes("Mishnayos · Peah 1"))).toBe(true);
   // Peah 1 came from the cache the second time.
-  expect(fetched.filter((u) => u.includes("Mishnah Peah 1"))).toHaveLength(1);
+  expect(fetched.filter((u) => u.endsWith("/mishnah/peah/1"))).toHaveLength(1);
 });
 
-test("Library: a daf shows both amudim, each passage with its Rashi", { timeoutMs: 30000 }, async ($, on) => {
+test("Library: a daf shows both amudim and their Rashi notes", { timeoutMs: 30000 }, async ($, on) => {
   const { clock } = host(on);
   const tick = async () => { await clock.advance(1); await settle(); };
   await $.command.run({ command: "dl", args: "" } as never);

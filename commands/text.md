@@ -7,4 +7,4 @@ Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dl.py $ARGUMENTS` and print the outpu
 
 If the user asked a question about the Rashi or any section rather than just for the text, run it with `--json` as well and answer from the fetched text, quoting the lines you comment on.
 
-If the output lists issues for a section, say so in one line and give that section's chabad.org link.
+If the output lists issues for a section, say so in one line and give that section's Shafeh link when available.
